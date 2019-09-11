@@ -128,12 +128,16 @@ class System(object):
         """
         T, theta, phi = self.temperature_map(n_theta, n_phi, f)
         int_bb = np.trapz(blackbody_lambda(
-                          self.filt.wavelength[:, np.newaxis, np.newaxis], T) *
+                              self.filt.wavelength[:, np.newaxis, np.newaxis],
+                              T) /
+                          blackbody_lambda(
+                              self.filt.wavelength[:, np.newaxis, np.newaxis],
+                              self.T_s) *
                           u.sr *
                           self.filt.wavelength[:, np.newaxis, np.newaxis] *
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
-                          ).to(u.W * u.m**-2).value
+                          ).value  #.to(u.W * u.m**-2).value
         interp_bb = RectBivariateSpline(theta, phi, int_bb.T)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
 

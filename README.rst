@@ -1,5 +1,5 @@
-Photometric phase curves of exoplanets
---------------------------------------
+kelp
+----
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org
@@ -11,6 +11,8 @@ Photometric phase curves of exoplanets
 .. image:: https://readthedocs.org/projects/kelp/badge/?version=latest
     :target: https://kelp.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
+
+Photometric phase curves of exoplanets.
 
 License
 -------
