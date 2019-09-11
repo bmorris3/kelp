@@ -56,13 +56,13 @@ class System(object):
         elif l == 0:
             return 1
         elif l == 1:
-            return 2*self.tilda_mu(theta)
+            return 2 * self.tilda_mu(theta)
         elif l == 2:
-            return 4*self.tilda_mu(theta)**2 - 2
+            return 4 * self.tilda_mu(theta)**2 - 2
         elif l == 3:
-            return 8*self.tilda_mu(theta)**3 - 12 * self.tilda_mu(theta)
+            return 8 * self.tilda_mu(theta)**3 - 12 * self.tilda_mu(theta)
         elif l == 4:
-            return (16*self.tilda_mu(theta)**4 - 48 *
+            return (16 * self.tilda_mu(theta)**4 - 48 *
                     self.tilda_mu(theta)**2 + 12)
         else:
             raise ValueError('H only implemented to l=4, l={0}'.format(l))
@@ -71,14 +71,27 @@ class System(object):
         if m == 0:
             return 0 * np.zeros((theta.shape[0], phi.shape[0]))
         prefactor = (self.C_ml[m][l] / (omega_drag**2 * alpha**4 + m**2) *
-                     np.exp(-self.tilda_mu(theta)**2/2))
+                     np.exp(-self.tilda_mu(theta)**2 / 2))
         return prefactor * (self.mu(theta) * m * self.H(l, theta) *
-                            np.cos(m*phi) + alpha * omega_drag *
-                            (2*l*self.H(l-1, theta) - self.tilda_mu(theta) *
+                            np.cos(m * phi) + alpha * omega_drag *
+                            (2 * l * self.H(l-1, theta) -
+                             self.tilda_mu(theta) *
                              self.H(l, theta)) * np.sin(m*phi))
 
     def temperature_map(self, n_theta, n_phi, f):
-        phi = np.linspace(-2*np.pi, 2*np.pi, n_phi)
+        """
+        Temperature map as a function of latitude (theta) and longitude (phi).
+
+        Parameters
+        ----------
+        n_theta : int
+            Number of grid points in latitude
+        n_phi : int
+            Number of grid points in longitude
+        f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
+        """
+        phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
@@ -88,13 +101,31 @@ class System(object):
             for m in range(-self.lmax, self.lmax+1):
                 h_ml_sum += self.h_ml(self.omega_drag, self.alpha, m, l,
                                       theta2d, phi2d)
-        T_eq = f * self.T_s * np.sqrt(1/self.a_rs)
+        T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
 
         T = T_eq * (1 - self.A_B)**0.25 * (1 + h_ml_sum)
 
         return T, theta, phi
 
     def integrated_blackbody(self, n_theta, n_phi, f):
+        """
+        Integral of the blackbody function convolved with a filter bandpass.
+
+        Parameters
+        ----------
+        n_theta : int
+            Number of grid points in latitude
+        n_phi : int
+            Number of grid points in longitude
+        f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
+
+        Returns
+        -------
+        interp_bb : function
+            Interpolation function for the blackbody map as a function of
+            latitude (theta) and longitude (phi)
+        """
         T, theta, phi = self.temperature_map(n_theta, n_phi, f)
         int_bb = np.trapz(blackbody_lambda(
                           self.filt.wavelength[:, np.newaxis, np.newaxis], T) *
@@ -102,11 +133,30 @@ class System(object):
                           self.filt.wavelength[:, np.newaxis, np.newaxis] *
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
-                          ).to(u.W*u.m**-2).value
+                          ).to(u.W * u.m**-2).value
         interp_bb = RectBivariateSpline(theta, phi, int_bb.T)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
 
-    def phase_curve(self, xi, n_theta=30, n_phi=30, f=1/np.sqrt(2)):
+    def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
+        """
+        Compute the optical thermal phase curve of the system as a function
+        of observer angle `xi`
+
+        Parameters
+        ----------
+        xi : array-like
+        n_theta : int
+            Number of grid points in latitude
+        n_phi : int
+            Number of grid points in longitude
+        f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
+
+        Returns
+        -------
+        fluxes : `~numpy.ndarray`
+            System fluxes as a function of phase angle `xi`.
+        """
         interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f)
 
         def integrand(phi, theta, xi):
@@ -116,12 +166,21 @@ class System(object):
         fluxes = np.zeros(len(xi))
         for i in range(len(xi)):
             fluxes[i] = dblquad(integrand, 0, np.pi,
-                                lambda x: -xi[i]-np.pi/2,
-                                lambda x: -xi[i]+np.pi/2,
+                                lambda x: -xi[i] - np.pi / 2,
+                                lambda x: -xi[i] + np.pi / 2,
                                 epsrel=100, args=(xi[i],))[0]
         return fluxes
 
-    def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1/np.sqrt(2)):
+    def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
+        """
+        Plot the temperature map.
+
+        Parameters
+        ----------
+        n_theta : int
+        n_phi : int
+        f : float
+        """
         from mpl_toolkits.mplot3d import Axes3D
 
         T, theta, phi = self.temperature_map(n_theta, n_phi, f)
@@ -134,8 +193,8 @@ class System(object):
 
         cax = plt.imshow(T.T, extent=[-2, 2, 0, 1], aspect=2)
         plt.colorbar(cax, extend='both', label='Temperature [K]')
-        plt.xlabel('$\\phi/\pi$')
-        plt.ylabel('$\\theta/\pi$')
+        plt.xlabel('$\\phi/\\pi$')
+        plt.ylabel('$\\theta/\\pi$')
         plt.show()
 
         fig = plt.figure(figsize=(3, 3))

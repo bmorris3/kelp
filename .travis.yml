@@ -66,8 +66,7 @@ env:
 
         # If you want to ignore certain flake8 errors, you can list them
         # in FLAKE8_OPT, for example:
-        # - FLAKE8_OPT='--ignore=E501'
-        - FLAKE8_OPT='--ignore=E501'
+        - FLAKE8_OPT='--ignore=E226,E504,E741,W504'
 
 matrix:
 

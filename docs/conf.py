@@ -33,7 +33,8 @@ from importlib import import_module
 try:
     from sphinx_astropy.conf.v1 import *  # noqa
 except ImportError:
-    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
+    print('ERROR: the documentation requires the sphinx-astropy '
+          'package to be installed')
     sys.exit(1)
 
 # Get configuration information from setup.cfg
@@ -168,7 +169,8 @@ if eval(setup_cfg.get('edit_on_github')):
     edit_on_github_doc_root = "docs"
 
 # -- Resolving issue number to links in changelog -----------------------------
-github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
+github_issues_url = ('https://github.com/{0}/issues/'
+                     .format(setup_cfg['github_project']))
 
 # -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
 #
