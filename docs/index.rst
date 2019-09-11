@@ -1,3 +1,5 @@
+.. include:: references.txt
+
 kelp
 ====
 
@@ -9,3 +11,4 @@ optical photometric phase curves of exoplanets.
   :maxdepth: 2
 
   kelp/index.rst
+
