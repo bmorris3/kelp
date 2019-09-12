@@ -69,7 +69,7 @@ class System(object):
 
     def h_ml(self, omega_drag, alpha, m, l, theta, phi):
         if m == 0:
-            return 0 * np.zeros((theta.shape[0], phi.shape[0]))
+            return 0 * np.zeros((theta.shape[0], phi.shape[1]))
         prefactor = (self.C_ml[m][l] / (omega_drag**2 * alpha**4 + m**2) *
                      np.exp(-self.tilda_mu(theta)**2 / 2))
         return prefactor * (self.mu(theta) * m * self.H(l, theta) *
@@ -95,7 +95,7 @@ class System(object):
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
-        h_ml_sum = np.zeros((n_theta, n_phi))
+        h_ml_sum = np.zeros((n_phi, n_theta))
 
         for l in range(0, self.lmax+1):
             for m in range(-self.lmax, self.lmax+1):
@@ -137,7 +137,7 @@ class System(object):
                           self.filt.wavelength[:, np.newaxis, np.newaxis] *
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
-                          ).value  #.to(u.W * u.m**-2).value
+                          ).value
         interp_bb = RectBivariateSpline(theta, phi, int_bb.T)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
 
