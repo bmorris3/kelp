@@ -91,7 +91,7 @@ class System(object):
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
         """
-        phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
+        phi = np.linspace(-2*np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
@@ -175,7 +175,7 @@ class System(object):
                                 epsrel=100, args=(xi[i],))[0]
         return fluxes
 
-    def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
+    def plot_temperature_maps(self, n_theta=10, n_phi=30, f=1 / np.sqrt(2)):
         """
         Plot the temperature map.
 
@@ -195,7 +195,8 @@ class System(object):
         y = np.sin(theta2d) * np.sin(phi2d)
         z = np.cos(theta2d)
 
-        cax = plt.imshow(T.T, extent=[-2, 2, 0, 1], aspect=2)
+        cax = plt.imshow(T.T, extent=[phi.min()/np.pi, phi.max()/np.pi,
+                                      theta.min()/np.pi, theta.max()/np.pi])
         plt.colorbar(cax, extend='both', label='Temperature [K]')
         plt.xlabel('$\\phi/\\pi$')
         plt.ylabel('$\\theta/\\pi$')
