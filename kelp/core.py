@@ -70,7 +70,8 @@ class System(object):
     def h_ml(self, omega_drag, alpha, m, l, theta, phi):
         if m == 0:
             return 0 * np.zeros((theta.shape[0], phi.shape[1]))
-        prefactor = (self.C_ml[m][l] / (omega_drag**2 * alpha**4 + m**2) *
+        prefactor = (np.sign(m) * self.C_ml[abs(m)][l] /
+                     (omega_drag**2 * alpha**4 + m**2) *
                      np.exp(-self.tilda_mu(theta)**2 / 2))
         return prefactor * (self.mu(theta) * m * self.H(l, theta) *
                             np.cos(m * phi) + alpha * omega_drag *
@@ -175,7 +176,7 @@ class System(object):
                                 epsrel=100, args=(xi[i],))[0]
         return fluxes
 
-    def plot_temperature_maps(self, n_theta=10, n_phi=30, f=1 / np.sqrt(2)):
+    def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
         """
         Plot the temperature map.
 
