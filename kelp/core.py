@@ -69,15 +69,16 @@ class System(object):
 
     def h_ml(self, omega_drag, alpha, m, l, theta, phi):
         if m == 0:
-            return 0 * np.zeros((theta.shape[0], phi.shape[1]))
+            return 0 * np.zeros((theta.shape[1], phi.shape[0]))
         prefactor = (np.sign(m) * self.C_ml[abs(m)][l] /
                      (omega_drag**2 * alpha**4 + m**2) *
                      np.exp(-self.tilda_mu(theta)**2 / 2))
-        return prefactor * (self.mu(theta) * m * self.H(l, theta) *
-                            np.cos(m * phi) + alpha * omega_drag *
-                            (2 * l * self.H(l-1, theta) -
-                             self.tilda_mu(theta) *
-                             self.H(l, theta)) * np.sin(m*phi))
+        hml = prefactor * (self.mu(theta) * abs(m) * self.H(l, theta) *
+                           np.cos(abs(m) * phi) + alpha * omega_drag *
+                           (2 * l * self.H(l-1, theta) -
+                            self.tilda_mu(theta) *
+                            self.H(l, theta)) * np.sin(abs(m) * phi))
+        return hml.T
 
     def temperature_map(self, n_theta, n_phi, f):
         """
@@ -92,16 +93,18 @@ class System(object):
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
         """
+        phase_offset = np.pi / 2
         phi = np.linspace(-2*np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
-        h_ml_sum = np.zeros((n_phi, n_theta))
+        h_ml_sum = np.zeros((n_theta, n_phi))
 
         for l in range(0, self.lmax+1):
-            for m in range(-self.lmax, self.lmax+1):
+            for m in range(0, self.lmax + 1):
+            #for m in range(-self.lmax, self.lmax+1):
                 h_ml_sum += self.h_ml(self.omega_drag, self.alpha, m, l,
-                                      theta2d, phi2d)
+                                      theta2d, phi2d + phase_offset)
         T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
 
         T = T_eq * (1 - self.A_B)**0.25 * (1 + h_ml_sum)
@@ -139,7 +142,7 @@ class System(object):
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
                           ).value
-        interp_bb = RectBivariateSpline(theta, phi, int_bb.T)
+        interp_bb = RectBivariateSpline(theta, phi, int_bb)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
 
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
@@ -196,7 +199,7 @@ class System(object):
         y = np.sin(theta2d) * np.sin(phi2d)
         z = np.cos(theta2d)
 
-        cax = plt.imshow(T.T, extent=[phi.min()/np.pi, phi.max()/np.pi,
+        cax = plt.imshow(T, extent=[phi.min()/np.pi, phi.max()/np.pi,
                                       theta.min()/np.pi, theta.max()/np.pi])
         plt.colorbar(cax, extend='both', label='Temperature [K]')
         plt.xlabel('$\\phi/\\pi$')
@@ -206,9 +209,9 @@ class System(object):
         fig = plt.figure(figsize=(3, 3))
         ax = Axes3D(fig)
         ax.plot_surface(x, y, z, rstride=1, cstride=1, shade=False,
-                        facecolors=plt.cm.viridis(T_norm))
+                        facecolors=plt.cm.viridis(T_norm.T))
         ax.view_init(0, 90)
         # Turn off the axis planes
         ax.set_axis_off()
-        ax.set_aspect(1.0)
+        #ax.set_aspect(1.0)
         plt.show()

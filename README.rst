@@ -12,7 +12,7 @@ kelp
     :target: https://kelp.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-Photometric phase curves of exoplanets.
+Photometric thermal phase curves of exoplanets.
 
 License
 -------
