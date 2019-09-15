@@ -12,10 +12,13 @@ class System(object):
     """
     Planetary system object for generating phase curves
     """
-    def __init__(self, alpha, omega_drag, A_B, C_ml, lmax, a_rs, T_s, filt):
+    def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
+                 a_rs, T_s, filt):
         """
         Parameters
         ----------
+        hotspot_offset :
+            Angle of hotspot offset [radians]
         alpha : float
             Dimensionless fluid number
         omega_drag : float
@@ -40,9 +43,10 @@ class System(object):
         self.A_B = A_B
         if len(C_ml) != lmax + 1:
             raise ValueError('Length of C_ml must be lmax+1')
-        self.C_ml = np.diag(C_ml)
+        self.C_ml = C_ml
         self.lmax = lmax
         self.filt = filt
+        self.hotspot_offset = hotspot_offset
 
     def tilda_mu(self, theta):
         return self.alpha * self.mu(theta)
@@ -100,11 +104,11 @@ class System(object):
         theta2d, phi2d = np.meshgrid(theta, phi)
         h_ml_sum = np.zeros((n_theta, n_phi))
 
-        for l in range(0, self.lmax+1):
+        for l in range(0, self.lmax + 1):
             for m in range(0, self.lmax + 1):
-            #for m in range(-self.lmax, self.lmax+1):
                 h_ml_sum += self.h_ml(self.omega_drag, self.alpha, m, l,
-                                      theta2d, phi2d + phase_offset)
+                                      theta2d, phi2d + phase_offset +
+                                      self.hotspot_offset)
         T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
 
         T = T_eq * (1 - self.A_B)**0.25 * (1 + h_ml_sum)
@@ -131,13 +135,14 @@ class System(object):
             latitude (theta) and longitude (phi)
         """
         T, theta, phi = self.temperature_map(n_theta, n_phi, f)
+        if (T < 0).any():
+            return lambda theta, phi: np.inf
         int_bb = np.trapz(blackbody_lambda(
                               self.filt.wavelength[:, np.newaxis, np.newaxis],
                               T) /
                           blackbody_lambda(
                               self.filt.wavelength[:, np.newaxis, np.newaxis],
                               self.T_s) *
-                          u.sr *
                           self.filt.wavelength[:, np.newaxis, np.newaxis] *
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
@@ -186,8 +191,11 @@ class System(object):
         Parameters
         ----------
         n_theta : int
+            Number of grid points in latitude
         n_phi : int
+            Number of grid points in longitude
         f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
         """
         from mpl_toolkits.mplot3d import Axes3D
 
