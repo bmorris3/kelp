@@ -13,7 +13,7 @@ class System(object):
     Planetary system object for generating phase curves
     """
     def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
-                 a_rs, T_s, filt):
+                 a_rs, rp_a, T_s, filt):
         """
         Parameters
         ----------
@@ -31,6 +31,8 @@ class System(object):
             Maximum `l` in spherical harmonic expansion
         a_rs : float
             Semimajor axis in units of stellar radii
+        rp_a : float
+            Planet radius normalized by the semimajor axis
         T_s : float [K]
             Stellar effective temperature
         filt : `~tynt.Filter`
@@ -47,6 +49,7 @@ class System(object):
         self.lmax = lmax
         self.filt = filt
         self.hotspot_offset = hotspot_offset
+        self.rp_a = rp_a
 
     def tilda_mu(self, theta):
         return self.alpha * self.mu(theta)
@@ -119,6 +122,8 @@ class System(object):
         """
         Integral of the blackbody function convolved with a filter bandpass.
 
+        Time for WASP-121 benchmark test: 63.7 ms
+
         Parameters
         ----------
         n_theta : int
@@ -149,6 +154,24 @@ class System(object):
                           ).value
         interp_bb = RectBivariateSpline(theta, phi, int_bb)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
+
+    def reflected(self, xi):
+        """
+        Symmetric reflection component of the phase curve.
+
+        Parameters
+        ----------
+        xi : array-like
+            Orbital phase angle
+
+        Returns
+        -------
+        f_R_sym : array-like
+            Reflected light (symmetric) component of the orbital phase curve.
+        """
+        A_g = 2 / 3 * self.A_B
+        return self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) + (
+                                      np.pi - np.abs(xi)) * np.cos(np.abs(xi)))
 
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
         """
@@ -182,7 +205,7 @@ class System(object):
                                 lambda x: -xi[i] - np.pi / 2,
                                 lambda x: -xi[i] + np.pi / 2,
                                 epsrel=100, args=(xi[i],))[0]
-        return fluxes
+        return fluxes + self.reflected(xi)
 
     def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
         """
