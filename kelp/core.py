@@ -71,8 +71,20 @@ class System(object):
         elif l == 4:
             return (16 * self.tilda_mu(theta)**4 - 48 *
                     self.tilda_mu(theta)**2 + 12)
+        elif l == 5:
+            return (32 * self.tilda_mu(theta)**5 - 160 *
+                    self.tilda_mu(theta)**3 + 120)
+        elif l == 6:
+            return (64 * self.tilda_mu(theta)**6 - 480 *
+                    self.tilda_mu(theta)**4 + 720 * self.tilda_mu(theta)**2
+                    - 120)
+        elif l == 7:
+            return (128 * self.tilda_mu(theta)**7 -
+                    1344 * self.tilda_mu(theta)**5 +
+                    3360 * self.tilda_mu(theta)**3 -
+                    1680 * self.tilda_mu(theta))
         else:
-            raise ValueError('H only implemented to l=4, l={0}'.format(l))
+            raise ValueError('H only implemented to l=7, l={0}'.format(l))
 
     def h_ml(self, omega_drag, alpha, m, l, theta, phi):
         if m == 0:
@@ -148,11 +160,11 @@ class System(object):
                           blackbody_lambda(
                               self.filt.wavelength[:, np.newaxis, np.newaxis],
                               self.T_s) *
-                          self.filt.wavelength[:, np.newaxis, np.newaxis] *
                           self.filt.transmittance[:, np.newaxis, np.newaxis],
                           self.filt.wavelength.value, axis=0
                           ).value
-        interp_bb = RectBivariateSpline(theta, phi, int_bb)
+        rp_rs = self.rp_a * self.a_rs
+        interp_bb = RectBivariateSpline(theta, phi, int_bb * rp_rs**2)
         return lambda theta, phi: interp_bb(theta, phi)[0][0]
 
     def reflected(self, xi):
