@@ -1,4 +1,4 @@
-Copyright (c) 2019, Brett M. Morris
+Copyright (c) 2020, Brett M. Morris
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

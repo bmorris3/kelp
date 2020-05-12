@@ -1,14 +1,11 @@
-.. include:: references.txt
-
 kelp
 ====
 
-This is the documentation for ``kelp``, a package for generating and fitting
-optical photometric phase curves of exoplanets.
-
+This is the documentation for ``kelp``, a photometric phase curve
+package written in Python. The source code is available on
+`GitHub <https://github.com/bmorris3/kelp>`_.
 
 .. toctree::
   :maxdepth: 2
 
   kelp/index.rst
-

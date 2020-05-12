@@ -14,10 +14,10 @@ class System(object):
     """
     def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
                  a_rs, rp_a, T_s, filt):
-        """
+        r"""
         Parameters
         ----------
-        hotspot_offset :
+        hotspot_offset : float
             Angle of hotspot offset [radians]
         alpha : float
             Dimensionless fluid number
@@ -28,14 +28,14 @@ class System(object):
         C_ml : array-like, list
             Spherical harmonic coefficients
         lmax : int
-            Maximum `l` in spherical harmonic expansion
+            Maximum :math:`\ell` in spherical harmonic expansion
         a_rs : float
             Semimajor axis in units of stellar radii
         rp_a : float
             Planet radius normalized by the semimajor axis
         T_s : float [K]
             Stellar effective temperature
-        filt : `~tynt.Filter`
+        filt : `~kelp.Filter`
             Filter of observations
         """
         self.alpha = alpha
@@ -52,12 +52,44 @@ class System(object):
         self.rp_a = rp_a
 
     def tilda_mu(self, theta):
+        r"""
+        The normalized quantity
+        :math:`\tilde{\mu} = \alpha \mu(\theta)`
+
+        Parameters
+        ----------
+        theta : `~numpy.ndarray`
+            Angle :math:`\theta`
+        """
         return self.alpha * self.mu(theta)
 
     def mu(self, theta):
+        r"""
+        Angle :math:`\mu = \cos(\theta)`
+
+        Parameters
+        ----------
+        theta : `~numpy.ndarray`
+            Angle :math:`\theta`
+        """
         return np.cos(theta)
 
     def H(self, l, theta):
+        r"""
+        Hermite Polynomials in :math:`\tilde{\mu(\theta)}`.
+
+        Parameters
+        ----------
+        l : int
+            Implemented through :math:`\ell \leq 7`.
+        theta : float
+            Angle :math:`\theta`
+
+        Returns
+        -------
+        result : `~numpy.ndarray`
+            Hermite Polynomial evaluated at angles :math:`\theta`.
+        """
         if l < 0:
             return 0
         elif l == 0:
@@ -84,9 +116,27 @@ class System(object):
                     3360 * self.tilda_mu(theta)**3 -
                     1680 * self.tilda_mu(theta))
         else:
-            raise ValueError('H only implemented to l=7, l={0}'.format(l))
+            raise NotImplementedError('H only implemented to l=7, l={0}'
+                                      .format(l))
 
     def h_ml(self, omega_drag, alpha, m, l, theta, phi):
+        r"""
+        The :math:`h_{m\ell}` basis function.
+
+        Parameters
+        ----------
+        omega_drag : float
+        alpha : float
+        m : int
+        l : int
+        theta : `~numpy.ndarray`
+        phi : `~numpy.ndarray`
+
+        Returns
+        -------
+        hml : `~numpy.ndarray`
+            :math:`h_{m\ell}` basis function.
+        """
         if m == 0:
             return 0 * np.zeros((theta.shape[1], phi.shape[0]))
         prefactor = (np.sign(m) * self.C_ml[abs(m)][l] /
