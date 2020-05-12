@@ -1,9 +1,9 @@
 import numpy as np
-from astropy.modeling.blackbody import blackbody_lambda
-import astropy.units as u
+import matplotlib.pyplot as plt
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
-import matplotlib.pyplot as plt
+
+from astropy.modeling.blackbody import blackbody_lambda
 
 __all__ = ['System']
 
@@ -185,7 +185,8 @@ class System(object):
         return self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) + (
                                       np.pi - np.abs(xi)) * np.cos(np.abs(xi)))
 
-    def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
+    def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2),
+                    reflected=False):
         """
         Compute the optical thermal phase curve of the system as a function
         of observer angle `xi`
@@ -199,6 +200,8 @@ class System(object):
             Number of grid points in longitude
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
+        reflected : bool
+            Include reflected light component
 
         Returns
         -------
@@ -217,11 +220,16 @@ class System(object):
                                 lambda x: -xi[i] - np.pi / 2,
                                 lambda x: -xi[i] + np.pi / 2,
                                 epsrel=100, args=(xi[i],))[0]
-        return fluxes + self.reflected(xi)
+        if reflected:
+            fluxes += self.reflected(xi)
+
+        return fluxes
 
     def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
         """
         Plot the temperature map.
+
+        Requires ``mpl_toolkits`` to be installed.
 
         Parameters
         ----------
