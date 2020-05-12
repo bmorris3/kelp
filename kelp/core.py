@@ -108,8 +108,8 @@ class System(object):
                     self.tilda_mu(theta)**3 + 120)
         elif l == 6:
             return (64 * self.tilda_mu(theta)**6 - 480 *
-                    self.tilda_mu(theta)**4 + 720 * self.tilda_mu(theta)**2
-                    - 120)
+                    self.tilda_mu(theta)**4 + 720 *
+                    self.tilda_mu(theta)**2 - 120)
         elif l == 7:
             return (128 * self.tilda_mu(theta)**7 -
                     1344 * self.tilda_mu(theta)**5 +
@@ -204,13 +204,12 @@ class System(object):
         T, theta, phi = self.temperature_map(n_theta, n_phi, f)
         if (T < 0).any():
             return lambda theta, phi: np.inf
-        int_bb = np.trapz(blackbody_lambda(
-                              self.filt.wavelength[:, np.newaxis, np.newaxis],
-                              T) /
-                          blackbody_lambda(
-                              self.filt.wavelength[:, np.newaxis, np.newaxis],
-                              self.T_s) *
-                          self.filt.transmittance[:, np.newaxis, np.newaxis],
+
+        bb_ratio = (blackbody_lambda(self.filt.wavelength[:, None, None], T) /
+                    blackbody_lambda(self.filt.wavelength[:, None, None], self.T_s))
+
+        int_bb = np.trapz(bb_ratio *
+                          self.filt.transmittance[:, None, None],
                           self.filt.wavelength.value, axis=0
                           ).value
         rp_rs = self.rp_a * self.a_rs
@@ -232,8 +231,8 @@ class System(object):
             Reflected light (symmetric) component of the orbital phase curve.
         """
         A_g = 2 / 3 * self.A_B
-        return self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) + (
-                                      np.pi - np.abs(xi)) * np.cos(np.abs(xi)))
+        return (self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) +
+                (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
 
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2),
                     reflected=False):
@@ -300,8 +299,8 @@ class System(object):
         y = np.sin(theta2d) * np.sin(phi2d)
         z = np.cos(theta2d)
 
-        cax = plt.imshow(T, extent=[phi.min()/np.pi, phi.max()/np.pi,
-                                      theta.min()/np.pi, theta.max()/np.pi])
+        cax = plt.imshow(T, extent=[phi.min() / np.pi, phi.max() / np.pi,
+                                    theta.min() / np.pi, theta.max() / np.pi])
         plt.colorbar(cax, extend='both', label='Temperature [K]')
         plt.xlabel('$\\phi/\\pi$')
         plt.ylabel('$\\theta/\\pi$')
@@ -314,5 +313,4 @@ class System(object):
         ax.view_init(0, 90)
         # Turn off the axis planes
         ax.set_axis_off()
-        #ax.set_aspect(1.0)
         plt.show()
