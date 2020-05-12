@@ -1,11 +1,17 @@
 import os
 from json import load
-from batman import TransitModel
 
-__all__ = ['Planet', 'Filter']
+import numpy as np
+import matplotlib.pyplot as plt
+
+from batman import TransitModel
+from astropy.io import fits
+
+__all__ = ['Planet', 'Filter', 'PhaseCurve']
 
 json_path = os.path.join(os.path.dirname(__file__), 'data', 'planets.json')
 filters_path = os.path.join(os.path.dirname(__file__), 'data', 'filters.json')
+pc_path = os.path.join(os.path.dirname(__file__), 'data', 'lightcurves.fits')
 
 
 class Planet(object):
@@ -99,3 +105,144 @@ class Filter(object):
             filters = load(f)
 
         return cls(**filters[name])
+
+    def plot(self, ax=None, **kwargs):
+        """
+        Plot the filter transmittance curve.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            Matplotlib axis object
+        kwargs : dict
+            Dictionary passed to the `~matplotlib.pyplot.plot` command
+
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            Updated axis object
+        """
+        if ax is None:
+            ax = plt.gca()
+
+        ax.plot(self.wavelength, self.transmittance, **kwargs)
+
+        return ax
+
+
+class PhaseCurve(object):
+    """
+    Thermal phase curve.
+    """
+    def __init__(self, xi, flux, name=None, channel=None, year=None,
+                 renormalize=True):
+        """
+        Parameters
+        ----------
+        xi : `~numpy.ndarray`
+            Times
+        flux : `~numpy.ndarray`
+            Flux measurements
+        name : str
+            Name of the host star
+        channel : str
+            Name of the Spitzer channel
+        year : int
+            Year of the observations (for disambiguating)
+        renormalize : bool
+            Re-normalize the phase curve such that it is represented as
+            :math:`F_p/F_s`, in units of ppm
+        """
+        self.xi = xi[np.argsort(xi)]
+
+        if renormalize:
+            in_eclipse = np.abs(xi) < 0.1
+            flux_in_eclipse = np.nanmedian(flux[in_eclipse])
+            flux = 1e6 * (flux - flux_in_eclipse)
+
+        self.flux = flux[np.argsort(xi)]
+        self.name = name
+        self.channel = channel
+        self.year = year
+
+    @classmethod
+    def from_name(cls, name, channel, year=None):
+        """
+        Initialize a Filter instance from the filter name.
+
+        Parameters
+        ----------
+        name : str (i.e.: "WASP-18", "KELT-9")
+            Name of the host star
+        channel : str (i.e.: "1" or "2")
+            Name of the filter (IRAC channel number)
+        year : int
+            Year of the observations (when
+            multiple observations are available)
+        """
+        available = []
+        with fits.open(pc_path) as fitsfile:
+            recarray = None
+            for hdu in fitsfile[1:]:
+                available.append("{0} (Ch {1}; year {2})"
+                                 .format(hdu.header['NAME'],
+                                         hdu.header['CHANNEL'],
+                                         hdu.header['YEAR']))
+                if (hdu.header['NAME'] == name and
+                        hdu.header['CHANNEL'] == channel and
+                        hdu.header['YEAR'] == year):
+                    recarray = hdu.data
+
+        if recarray is not None:
+            return cls(recarray['xi'], recarray['flux'],
+                       name=name, channel=channel, year=year,
+                       renormalize=False)
+        else:
+            raise KeyError(('Target {1} (Ch {0}, {2}) not ' +
+                            'found in FITS registry, ' +
+                            'which contains: {3}'
+                            ).format(channel, name, year,
+                                     ', '.join(sorted(available))))
+
+    def plot(self, ax=None, **kwargs):
+        """
+        Plot the phase curve.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            Matplotlib axis object
+        kwargs : dict
+            Dictionary passed to the `~matplotlib.pyplot.plot` command
+
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            Updated axis object
+        """
+        if ax is None:
+            ax = plt.gca()
+
+        ax.plot(self.xi, self.flux, '.', **kwargs)
+
+        return ax
+
+    def _add_to_fits(self, fitsfile):
+        """
+
+        Parameters
+        ----------
+        fitsfile
+
+        Returns
+        -------
+
+        """
+        ra = np.recarray(len(self.xi), names=["xi", "flux"],
+                         formats=['f8', 'f8'])
+        ra['xi'] = self.xi
+        ra['flux'] = self.flux
+        header = fits.Header(dict(YEAR=self.year,
+                                  CHANNEL=self.channel,
+                                  NAME=self.name))
+        fitsfile.append(fits.BinTableHDU(ra, header))

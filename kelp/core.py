@@ -163,7 +163,7 @@ class System(object):
             Greenhouse parameter (typically 1/sqrt(2)).
         """
         phase_offset = np.pi / 2
-        phi = np.linspace(-2*np.pi, 2 * np.pi, n_phi)
+        phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
