@@ -229,14 +229,12 @@ class PhaseCurve(object):
 
     def _add_to_fits(self, fitsfile):
         """
+        Add this phase curve to a FITS archive ``fitsfile``.
 
         Parameters
         ----------
-        fitsfile
-
-        Returns
-        -------
-
+        fitsfile : FITS file stream
+            Open FITS file stream
         """
         ra = np.recarray(len(self.xi), names=["xi", "flux"],
                          formats=['f8', 'f8'])
