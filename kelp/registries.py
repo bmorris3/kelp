@@ -1,15 +1,17 @@
 import os
 from json import load
+from copy import deepcopy
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from batman import TransitModel
 from astropy.io import fits
+import astropy.units as u
 
 __all__ = ['Planet', 'Filter', 'PhaseCurve']
 
-json_path = os.path.join(os.path.dirname(__file__), 'data', 'planets.json')
+planets_path = os.path.join(os.path.dirname(__file__), 'data', 'planets.json')
 filters_path = os.path.join(os.path.dirname(__file__), 'data', 'filters.json')
 pc_path = os.path.join(os.path.dirname(__file__), 'data', 'lightcurves.fits')
 
@@ -22,7 +24,7 @@ class Planet(object):
     transiting exoplanet parameters ``TransitParams`` object.
     """
     def __init__(self, per=None, t0=None, inc=None, rp=None, ecc=None, w=None,
-                 a=None, u=None, fp=None, t_secondary=None,
+                 a=None, u=None, fp=None, t_secondary=None, T_s=None, rp_a=None,
                  limb_dark='quadratic'):
         self.per = per
         self.t0 = t0
@@ -35,6 +37,8 @@ class Planet(object):
         self.limb_dark = limb_dark
         self.fp = fp
         self.t_secondary = t_secondary
+        self.T_s = T_s
+        self.rp_a = rp_a
 
     @classmethod
     def from_name(cls, name):
@@ -50,12 +54,12 @@ class Planet(object):
         name : str (i.e.: "Kepler-7" or "KELT-9")
              Name of the planet
         """
-        with open(json_path, 'r') as f:
+        with open(planets_path, 'r') as f:
             planets = load(f)
 
         return cls(**planets[name])
 
-    def eclipse_model(self, xi_over_pi):
+    def eclipse_model(self, xi):
         r"""
         Compute eclipse model at orbital phases ``xi``.
 
@@ -69,7 +73,10 @@ class Planet(object):
         eclipse : `~numpy.ndarray`
             Eclipse model normalized such that flux is zero in eclipse.
         """
-        eclipse = TransitModel(self, xi_over_pi, transittype='secondary'
+        xi_over_pi = xi / np.pi
+        eclipse = TransitModel(self, xi_over_pi, transittype='secondary',
+                               exp_time=xi_over_pi[1] - xi_over_pi[0],
+                               supersample_factor=3,
                                ).light_curve(self)
         eclipse -= eclipse.min()
         return eclipse
@@ -104,7 +111,8 @@ class Filter(object):
         with open(filters_path, 'r') as f:
             filters = load(f)
 
-        return cls(**filters[name])
+        return cls(np.array(filters[name]['wavelength']) * u.um,
+                   np.array(filters[name]['transmittance']))
 
     def plot(self, ax=None, **kwargs):
         """
@@ -134,6 +142,9 @@ class PhaseCurve(object):
     """
     Thermal phase curve.
     """
+    fits_file = None
+    available = []
+
     def __init__(self, xi, flux, name=None, channel=None, year=None,
                  renormalize=True):
         """
@@ -180,18 +191,21 @@ class PhaseCurve(object):
             Year of the observations (when
             multiple observations are available)
         """
-        available = []
-        with fits.open(pc_path) as fitsfile:
-            recarray = None
-            for hdu in fitsfile[1:]:
-                available.append("{0} (Ch {1}; year {2})"
-                                 .format(hdu.header['NAME'],
-                                         hdu.header['CHANNEL'],
-                                         hdu.header['YEAR']))
-                if (hdu.header['NAME'] == name and
-                        hdu.header['CHANNEL'] == channel and
-                        hdu.header['YEAR'] == year):
-                    recarray = hdu.data
+        if cls.fits_file is None:
+            with fits.open(pc_path) as fitsfile:
+                cls.fits_file = deepcopy(fitsfile)
+            for hdu in cls.fits_file[1:]:
+                cls.available.append("{0} (Ch {1}; year {2})"
+                                     .format(hdu.header['NAME'],
+                                             hdu.header['CHANNEL'],
+                                             hdu.header['YEAR']))
+
+        recarray = None
+        for hdu in cls.fits_file[1:]:
+            if (hdu.header['NAME'] == name and
+                    hdu.header['CHANNEL'] == channel and
+                    hdu.header['YEAR'] == year):
+                recarray = hdu.data
 
         if recarray is not None:
             return cls(recarray['xi'], recarray['flux'],
@@ -202,9 +216,9 @@ class PhaseCurve(object):
                             'found in FITS registry, ' +
                             'which contains: {3}'
                             ).format(channel, name, year,
-                                     ', '.join(sorted(available))))
+                                     ', '.join(sorted(cls.available))))
 
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, mask=None, **kwargs):
         """
         Plot the phase curve.
 
@@ -223,7 +237,10 @@ class PhaseCurve(object):
         if ax is None:
             ax = plt.gca()
 
-        ax.plot(self.xi, self.flux, '.', **kwargs)
+        if mask is None:
+            mask = np.ones_like(self.xi).astype(bool)
+
+        ax.plot(self.xi[mask], self.flux[mask], '.', **kwargs)
 
         return ax
 

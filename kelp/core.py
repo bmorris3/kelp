@@ -5,10 +5,12 @@ from scipy.interpolate import RectBivariateSpline
 
 from astropy.modeling.blackbody import blackbody_lambda
 
-__all__ = ['System']
+from .registries import Planet, Filter
+
+__all__ = ['Model']
 
 
-class System(object):
+class Model(object):
     """
     Planetary system object for generating phase curves
     """
@@ -45,11 +47,39 @@ class System(object):
         self.A_B = A_B
         if len(C_ml) != lmax + 1:
             raise ValueError('Length of C_ml must be lmax+1')
-        self.C_ml = C_ml
+        self.C_ml = np.asarray(C_ml)
         self.lmax = lmax
         self.filt = filt
         self.hotspot_offset = hotspot_offset
         self.rp_a = rp_a
+
+    @classmethod
+    def from_names(cls, host_name, filter_name,
+                   hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax):
+        """
+        Parameters
+        ----------
+        host_name : str
+            Name of host star
+        filter_name : str, {"IRAC 1" or "IRAC 2"}
+            Name of the filter bandpass
+        hotspot_offset : float
+            Angle of hotspot offset [radians]
+        alpha : float
+            Dimensionless fluid number
+        omega_drag : float
+            Dimensionless drag frequency
+        A_B : float
+            Bond albedo
+        C_ml : array-like, list
+            Spherical harmonic coefficients
+        lmax : int
+            Maximum :math:`\ell` in spherical harmonic expansion
+        """
+        planet = Planet.from_name(host_name)
+        filt = Filter.from_name(filter_name)
+        return cls(hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
+                   planet.a, planet.rp_a, planet.T_s, filt)
 
     def tilda_mu(self, theta):
         r"""
@@ -206,7 +236,8 @@ class System(object):
             return lambda theta, phi: np.inf
 
         bb_ratio = (blackbody_lambda(self.filt.wavelength[:, None, None], T) /
-                    blackbody_lambda(self.filt.wavelength[:, None, None], self.T_s))
+                    blackbody_lambda(self.filt.wavelength[:, None, None],
+                                     self.T_s))
 
         int_bb = np.trapz(bb_ratio *
                           self.filt.transmittance[:, None, None],
@@ -237,7 +268,7 @@ class System(object):
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2),
                     reflected=False):
         """
-        Compute the optical thermal phase curve of the system as a function
+        Compute the thermal phase curve of the system as a function
         of observer angle `xi`
 
         Parameters
