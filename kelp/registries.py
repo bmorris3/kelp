@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import binned_statistic
 
 from batman import TransitModel
 from astropy.io import fits
@@ -86,6 +87,9 @@ class Filter(object):
     """
     Astronomical filter object.
     """
+    with open(filters_path, 'r') as f:
+        filters = load(f)
+
     def __init__(self, wavelength, transmittance):
         """
         Parameters
@@ -108,11 +112,8 @@ class Filter(object):
         name : str (i.e.: "IRAC 1" or "IRAC 2")
              Name of the filter
         """
-        with open(filters_path, 'r') as f:
-            filters = load(f)
-
-        return cls(np.array(filters[name]['wavelength']) * u.um,
-                   np.array(filters[name]['transmittance']))
+        return cls(np.array(cls.filters[name]['wavelength']) * u.um,
+                   np.array(cls.filters[name]['transmittance']))
 
     def plot(self, ax=None, **kwargs):
         """
@@ -136,6 +137,14 @@ class Filter(object):
         ax.plot(self.wavelength, self.transmittance, **kwargs)
 
         return ax
+
+    def bin_down(self, bins=15):
+        bs = binned_statistic(self.wavelength.value, self.transmittance,
+                              bins=bins, statistic='median')
+        bincenters = 0.5 * (bs.bin_edges[1:] + bs.bin_edges[:-1])
+
+        self.wavelength = bincenters * self.wavelength.unit
+        self.transmittance = bs.statistic
 
 
 class PhaseCurve(object):

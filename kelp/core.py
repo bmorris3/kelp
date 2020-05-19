@@ -3,11 +3,88 @@ import matplotlib.pyplot as plt
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
+from numba import njit
+
 from astropy.modeling.blackbody import blackbody_lambda
 
 from .registries import Planet, Filter
 
 __all__ = ['Model']
+
+
+@njit
+def mu(theta):
+    r"""
+    Angle :math:`\mu = \cos(\theta)`
+
+    Parameters
+    ----------
+    theta : `~numpy.ndarray`
+        Angle :math:`\theta`
+    """
+    return np.cos(theta)
+
+
+@njit
+def tilda_mu(theta, alpha):
+    r"""
+    The normalized quantity
+    :math:`\tilde{\mu} = \alpha \mu(\theta)`
+
+    Parameters
+    ----------
+    theta : `~numpy.ndarray`
+        Angle :math:`\theta`
+    alpha : float
+        Dimensionless fluid number :math:`\alpha`
+    """
+    return alpha * mu(theta)
+
+
+@njit
+def H(l, theta, alpha):
+    r"""
+    Hermite Polynomials in :math:`\tilde{\mu(\theta)}`.
+
+    Parameters
+    ----------
+    l : int
+        Implemented through :math:`\ell \leq 7`.
+    theta : float
+        Angle :math:`\theta`
+    alpha : float
+        Dimensionless fluid number :math:`\alpha`
+
+    Returns
+    -------
+    result : `~numpy.ndarray`
+        Hermite Polynomial evaluated at angles :math:`\theta`.
+    """
+    if l < 0:
+        return np.zeros_like(theta)
+    elif l == 0:
+        return np.ones_like(theta)
+    elif l == 1:
+        return 2 * tilda_mu(theta, alpha)
+    elif l == 2:
+        return 4 * tilda_mu(theta, alpha) ** 2 - 2
+    elif l == 3:
+        return 8 * tilda_mu(theta, alpha) ** 3 - 12 * tilda_mu(theta, alpha)
+    elif l == 4:
+        return (16 * tilda_mu(theta, alpha) ** 4 - 48 *
+                tilda_mu(theta, alpha) ** 2 + 12)
+    elif l == 5:
+        return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
+                tilda_mu(theta, alpha) ** 3 + 120)
+    elif l == 6:
+        return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
+                tilda_mu(theta, alpha) ** 4 + 720 *
+                tilda_mu(theta, alpha) ** 2 - 120)
+    elif l == 7:
+        return (128 * tilda_mu(theta, alpha) ** 7 -
+                1344 * tilda_mu(theta, alpha) ** 5 +
+                3360 * tilda_mu(theta, alpha) ** 3 -
+                1680 * tilda_mu(theta, alpha))
 
 
 class Model(object):
@@ -78,6 +155,7 @@ class Model(object):
         """
         planet = Planet.from_name(host_name)
         filt = Filter.from_name(filter_name)
+        filt.bin_down()
         return cls(hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
                    planet.a, planet.rp_a, planet.T_s, filt)
 
@@ -120,31 +198,9 @@ class Model(object):
         result : `~numpy.ndarray`
             Hermite Polynomial evaluated at angles :math:`\theta`.
         """
-        if l < 0:
-            return 0
-        elif l == 0:
-            return 1
-        elif l == 1:
-            return 2 * self.tilda_mu(theta)
-        elif l == 2:
-            return 4 * self.tilda_mu(theta)**2 - 2
-        elif l == 3:
-            return 8 * self.tilda_mu(theta)**3 - 12 * self.tilda_mu(theta)
-        elif l == 4:
-            return (16 * self.tilda_mu(theta)**4 - 48 *
-                    self.tilda_mu(theta)**2 + 12)
-        elif l == 5:
-            return (32 * self.tilda_mu(theta)**5 - 160 *
-                    self.tilda_mu(theta)**3 + 120)
-        elif l == 6:
-            return (64 * self.tilda_mu(theta)**6 - 480 *
-                    self.tilda_mu(theta)**4 + 720 *
-                    self.tilda_mu(theta)**2 - 120)
-        elif l == 7:
-            return (128 * self.tilda_mu(theta)**7 -
-                    1344 * self.tilda_mu(theta)**5 +
-                    3360 * self.tilda_mu(theta)**3 -
-                    1680 * self.tilda_mu(theta))
+        if l < 8:
+            return H(l, theta, self.alpha)
+
         else:
             raise NotImplementedError('H only implemented to l=7, l={0}'
                                       .format(l))
@@ -267,13 +323,14 @@ class Model(object):
 
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2),
                     reflected=False):
-        """
+        r"""
         Compute the thermal phase curve of the system as a function
         of observer angle `xi`
 
         Parameters
         ----------
         xi : array-like
+            Orbital phase angle
         n_theta : int
             Number of grid points in latitude
         n_phi : int
@@ -286,7 +343,7 @@ class Model(object):
         Returns
         -------
         fluxes : `~numpy.ndarray`
-            System fluxes as a function of phase angle `xi`.
+            System fluxes as a function of phase angle :math:`\xi`.
         """
         interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f)
 
