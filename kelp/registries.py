@@ -24,6 +24,9 @@ class Planet(object):
     This is meant to be a duck-type drop-in for the ``batman`` package's
     transiting exoplanet parameters ``TransitParams`` object.
     """
+    with open(planets_path, 'r') as f:
+        planets = load(f)
+
     def __init__(self, per=None, t0=None, inc=None, rp=None, ecc=None, w=None,
                  a=None, u=None, fp=None, t_secondary=None, T_s=None, rp_a=None,
                  limb_dark='quadratic'):
@@ -55,10 +58,8 @@ class Planet(object):
         name : str (i.e.: "Kepler-7" or "KELT-9")
              Name of the planet
         """
-        with open(planets_path, 'r') as f:
-            planets = load(f)
 
-        return cls(**planets[name])
+        return cls(**cls.planets[name])
 
     def eclipse_model(self, xi):
         r"""

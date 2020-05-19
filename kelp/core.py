@@ -155,7 +155,6 @@ class Model(object):
         """
         planet = Planet.from_name(host_name)
         filt = Filter.from_name(filter_name)
-        filt.bin_down()
         return cls(hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
                    planet.a, planet.rp_a, planet.T_s, filt)
 
