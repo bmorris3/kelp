@@ -60,9 +60,7 @@ def H(l, theta, alpha):
     result : `~numpy.ndarray`
         Hermite Polynomial evaluated at angles :math:`\theta`.
     """
-    if l < 0:
-        return np.zeros_like(theta)
-    elif l == 0:
+    if l == 0:
         return np.ones_like(theta)
     elif l == 1:
         return 2 * tilda_mu(theta, alpha)
@@ -224,14 +222,19 @@ class Model(object):
         """
         if m == 0:
             return 0 * np.zeros((theta.shape[1], phi.shape[0]))
-        prefactor = (np.sign(m) * self.C_ml[abs(m)][l] /
-                     (omega_drag**2 * alpha**4 + m**2) *
-                     np.exp(-self.tilda_mu(theta)**2 / 2))
-        hml = prefactor * (self.mu(theta) * abs(m) * self.H(l, theta) *
-                           np.cos(abs(m) * phi) + alpha * omega_drag *
-                           (2 * l * self.H(l-1, theta) -
-                            self.tilda_mu(theta) *
-                            self.H(l, theta)) * np.sin(abs(m) * phi))
+
+        prefactor = (self.C_ml[l][m] /
+                     (omega_drag ** 2 * alpha ** 4 + m ** 2) *
+                     np.exp(-self.tilda_mu(theta) ** 2 / 2))
+
+        a = self.mu(theta) * m * self.H(l, theta) * np.cos(m * phi)
+
+        b = alpha * omega_drag * (
+                    self.tilda_mu(theta) * self.H(l, theta) -
+                    self.H(l + 1, theta))
+
+        c = np.sin(m * phi)
+        hml = prefactor * (a + b * c)
         return hml.T
 
     def temperature_map(self, n_theta, n_phi, f):
@@ -254,8 +257,8 @@ class Model(object):
         theta2d, phi2d = np.meshgrid(theta, phi)
         h_ml_sum = np.zeros((n_theta, n_phi))
 
-        for l in range(0, self.lmax + 1):
-            for m in range(0, self.lmax + 1):
+        for l in range(1, self.lmax + 1):
+            for m in range(-l, l + 1):
                 h_ml_sum += self.h_ml(self.omega_drag, self.alpha, m, l,
                                       theta2d, phi2d + phase_offset +
                                       self.hotspot_offset)
