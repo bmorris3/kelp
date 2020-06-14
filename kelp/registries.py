@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic
 
-from batman import TransitModel
 from astropy.io import fits
 import astropy.units as u
 
@@ -75,6 +74,8 @@ class Planet(object):
         eclipse : `~numpy.ndarray`
             Eclipse model normalized such that flux is zero in eclipse.
         """
+        from batman import TransitModel
+
         xi_over_pi = xi / np.pi
         eclipse = TransitModel(self, xi_over_pi, transittype='secondary',
                                exp_time=xi_over_pi[1] - xi_over_pi[0],
