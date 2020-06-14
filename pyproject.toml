@@ -3,6 +3,7 @@
 requires = ["setuptools",
             "setuptools_scm",
             "wheel",
-            "numpy"]
+            "numpy",
+            "batman-package"]
 
 build-backend = 'setuptools.build_meta'
