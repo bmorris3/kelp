@@ -23,8 +23,8 @@ class Planet(object):
     This is meant to be a duck-type drop-in for the ``batman`` package's
     transiting exoplanet parameters ``TransitParams`` object.
     """
-    with open(planets_path, 'r') as f:
-        planets = load(f)
+    with open(planets_path, 'r') as _f:
+        _planets = load(_f)
 
     def __init__(self, per=None, t0=None, inc=None, rp=None, ecc=None, w=None,
                  a=None, u=None, fp=None, t_secondary=None, T_s=None, rp_a=None,
@@ -58,7 +58,7 @@ class Planet(object):
              Name of the planet
         """
 
-        return cls(**cls.planets[name])
+        return cls(**cls._planets[name])
 
     def eclipse_model(self, xi):
         r"""
@@ -66,8 +66,8 @@ class Planet(object):
 
         Parameters
         ----------
-        xi_over_pi : `~numpy.ndarray`
-            Orbital phase angle :math:`\xi/\pi` normalized on [-1, 1]
+        xi : `~numpy.ndarray`
+            Orbital phase angle :math:`\xi`
 
         Returns
         -------
@@ -89,8 +89,8 @@ class Filter(object):
     """
     Astronomical filter object.
     """
-    with open(filters_path, 'r') as f:
-        filters = load(f)
+    with open(filters_path, 'r') as _f:
+        _filters = load(_f)
 
     def __init__(self, wavelength, transmittance):
         """
@@ -114,8 +114,8 @@ class Filter(object):
         name : str (i.e.: "IRAC 1" or "IRAC 2")
              Name of the filter
         """
-        return cls(np.array(cls.filters[name]['wavelength']) * u.um,
-                   np.array(cls.filters[name]['transmittance']))
+        return cls(np.array(cls._filters[name]['wavelength']) * u.um,
+                   np.array(cls._filters[name]['transmittance']))
 
     def plot(self, ax=None, **kwargs):
         """
@@ -141,6 +141,10 @@ class Filter(object):
         return ax
 
     def bin_down(self, bins=15):
+        """
+        Bin down the filter bandpass wavelengths and transmittances (shortcut
+        for faster integration over the bandpass).
+        """
         bs = binned_statistic(self.wavelength.value, self.transmittance,
                               bins=bins, statistic='median')
         bincenters = 0.5 * (bs.bin_edges[1:] + bs.bin_edges[:-1])

@@ -243,7 +243,7 @@ class Model(object):
         hml = prefactor * (a + b * c)
         return hml.T
 
-    def temperature_map(self, n_theta, n_phi, f):
+    def temperature_map(self, n_theta, n_phi, f=2**-0.5):
         """
         Temperature map as a function of latitude (theta) and longitude (phi).
 
@@ -274,7 +274,7 @@ class Model(object):
 
         return T, theta, phi
 
-    def integrated_blackbody(self, n_theta, n_phi, f):
+    def integrated_blackbody(self, n_theta, n_phi, f=2**-0.5):
         """
         Integral of the blackbody function convolved with a filter bandpass.
 
