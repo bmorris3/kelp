@@ -5,7 +5,8 @@ from scipy.interpolate import RectBivariateSpline
 
 from numba import njit
 
-from astropy.modeling.blackbody import blackbody_lambda
+from astropy.modeling.models import BlackBody
+import astropy.units as u
 
 from .registries import Planet, Filter
 
@@ -90,7 +91,7 @@ class Model(object):
     Planetary system object for generating phase curves
     """
     def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
-                 a_rs, rp_a, T_s, filt):
+                 a_rs=None, rp_a=None, T_s=None, planet=None, filt=None):
         r"""
         Parameters
         ----------
@@ -117,8 +118,6 @@ class Model(object):
         """
         self.alpha = alpha
         self.omega_drag = omega_drag
-        self.a_rs = a_rs
-        self.T_s = T_s
         self.A_B = A_B
         if len(C_ml) != lmax + 1:
             raise ValueError('Length of C_ml must be lmax+1')
@@ -126,7 +125,15 @@ class Model(object):
         self.lmax = lmax
         self.filt = filt
         self.hotspot_offset = hotspot_offset
+
+        if planet is not None:
+            rp_a = planet.rp_a
+            a_rs = planet.a
+            T_s = planet.T_s
+
         self.rp_a = rp_a
+        self.a_rs = a_rs
+        self.T_s = T_s
 
     @classmethod
     def from_names(cls, host_name, filter_name,
@@ -293,9 +300,11 @@ class Model(object):
         if (T < 0).any():
             return lambda theta, phi: np.inf
 
-        bb_ratio = (blackbody_lambda(self.filt.wavelength[:, None, None], T) /
-                    blackbody_lambda(self.filt.wavelength[:, None, None],
-                                     self.T_s))
+        bb_t = BlackBody(temperature=T * u.K)
+        bb_ts = BlackBody(temperature=self.T_s * u.K)
+
+        bb_ratio = (bb_t(self.filt.wavelength[:, None, None]) /
+                    bb_ts(self.filt.wavelength[:, None, None]))
 
         int_bb = np.trapz(bb_ratio *
                           self.filt.transmittance[:, None, None],

@@ -8,4 +8,6 @@ package written in Python. The source code is available on
 .. toctree::
   :maxdepth: 2
 
+  kelp/installation.rst
+  kelp/gettingstarted.rst
   kelp/index.rst
