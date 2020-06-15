@@ -156,7 +156,7 @@ class Model(object):
         C_ml : array-like, list
             Spherical harmonic coefficients
         lmax : int
-            Maximum :math:`\ell` in spherical harmonic expansion
+            Maximum :math:`\\ell` in spherical harmonic expansion
         """
         planet = Planet.from_name(host_name)
         filt = Filter.from_name(filter_name)
@@ -236,9 +236,8 @@ class Model(object):
 
         a = self.mu(theta) * m * self.H(l, theta) * np.cos(m * phi)
 
-        b = alpha * omega_drag * (
-                    self.tilda_mu(theta) * self.H(l, theta) -
-                    self.H(l + 1, theta))
+        b = alpha * omega_drag * (self.tilda_mu(theta) * self.H(l, theta) -
+                                  self.H(l + 1, theta))
 
         c = np.sin(m * phi)
         hml = prefactor * (a + b * c)
