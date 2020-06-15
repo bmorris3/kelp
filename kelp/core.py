@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
@@ -7,8 +6,6 @@ from numba import njit
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
-
-from .registries import Planet, Filter
 
 __all__ = ['Model']
 
@@ -45,7 +42,7 @@ def tilda_mu(theta, alpha):
 @njit
 def H(l, theta, alpha):
     r"""
-    Hermite Polynomials in :math:`\tilde{\mu(\theta)}`.
+    Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
 
     Parameters
     ----------
@@ -113,18 +110,23 @@ class Model(object):
             Planet radius normalized by the semimajor axis
         T_s : float [K]
             Stellar effective temperature
+        planet : `~kelp.Planet`
+            Planet instance which can be specified instead of the three
+            previous parameters
         filt : `~kelp.Filter`
             Filter of observations
         """
+        self.hotspot_offset = hotspot_offset
         self.alpha = alpha
         self.omega_drag = omega_drag
         self.A_B = A_B
+
         if len(C_ml) != lmax + 1:
             raise ValueError('Length of C_ml must be lmax+1')
-        self.C_ml = np.asarray(C_ml)
+
+        self.C_ml = C_ml
         self.lmax = lmax
         self.filt = filt
-        self.hotspot_offset = hotspot_offset
 
         if planet is not None:
             rp_a = planet.rp_a
@@ -134,34 +136,6 @@ class Model(object):
         self.rp_a = rp_a
         self.a_rs = a_rs
         self.T_s = T_s
-
-    @classmethod
-    def from_names(cls, host_name, filter_name,
-                   hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax):
-        """
-        Parameters
-        ----------
-        host_name : str
-            Name of host star
-        filter_name : str, {"IRAC 1" or "IRAC 2"}
-            Name of the filter bandpass
-        hotspot_offset : float
-            Angle of hotspot offset [radians]
-        alpha : float
-            Dimensionless fluid number
-        omega_drag : float
-            Dimensionless drag frequency
-        A_B : float
-            Bond albedo
-        C_ml : array-like, list
-            Spherical harmonic coefficients
-        lmax : int
-            Maximum :math:`\\ell` in spherical harmonic expansion
-        """
-        planet = Planet.from_name(host_name)
-        filt = Filter.from_name(filter_name)
-        return cls(hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
-                   planet.a, planet.rp_a, planet.T_s, filt)
 
     def tilda_mu(self, theta):
         r"""
@@ -188,7 +162,7 @@ class Model(object):
 
     def H(self, l, theta):
         r"""
-        Hermite Polynomials in :math:`\tilde{\mu(\theta)}`.
+        Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
 
         Parameters
         ----------
@@ -216,11 +190,17 @@ class Model(object):
         Parameters
         ----------
         omega_drag : float
+            Dimensionless drag
         alpha : float
+            Dimensionless fluid number
         m : int
+            Spherical harmonic ``m`` index
         l : int
+            Spherical harmonic ``l`` index
         theta : `~numpy.ndarray`
+            Latitudinal coordinate
         phi : `~numpy.ndarray`
+            Longitudinal coordinate
 
         Returns
         -------
@@ -335,7 +315,7 @@ class Model(object):
                     reflected=False):
         r"""
         Compute the thermal phase curve of the system as a function
-        of observer angle `xi`
+        of observer angle ``xi``.
 
         Parameters
         ----------
@@ -371,44 +351,3 @@ class Model(object):
             fluxes += self.reflected(xi)
 
         return fluxes
-
-    def plot_temperature_maps(self, n_theta=30, n_phi=30, f=1 / np.sqrt(2)):
-        """
-        Plot the temperature map.
-
-        Requires ``mpl_toolkits`` to be installed.
-
-        Parameters
-        ----------
-        n_theta : int
-            Number of grid points in latitude
-        n_phi : int
-            Number of grid points in longitude
-        f : float
-            Greenhouse parameter (typically 1/sqrt(2)).
-        """
-        from mpl_toolkits.mplot3d import Axes3D
-
-        T, theta, phi = self.temperature_map(n_theta, n_phi, f)
-        T_norm = (T - T.min()) / T.ptp()
-        theta2d, phi2d = np.meshgrid(theta, phi)
-
-        x = np.sin(theta2d) * np.cos(phi2d)
-        y = np.sin(theta2d) * np.sin(phi2d)
-        z = np.cos(theta2d)
-
-        cax = plt.imshow(T, extent=[phi.min() / np.pi, phi.max() / np.pi,
-                                    theta.min() / np.pi, theta.max() / np.pi])
-        plt.colorbar(cax, extend='both', label='Temperature [K]')
-        plt.xlabel('$\\phi/\\pi$')
-        plt.ylabel('$\\theta/\\pi$')
-        plt.show()
-
-        fig = plt.figure(figsize=(3, 3))
-        ax = Axes3D(fig)
-        ax.plot_surface(x, y, z, rstride=1, cstride=1, shade=False,
-                        facecolors=plt.cm.viridis(T_norm.T))
-        ax.view_init(0, 90)
-        # Turn off the axis planes
-        ax.set_axis_off()
-        plt.show()

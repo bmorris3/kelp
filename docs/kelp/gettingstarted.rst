@@ -131,6 +131,9 @@ field plots:
 .. jupyter-execute::
 
     def indexer(m, l):
+        """
+        Returns C_ml where all values are zero except C_{m, l} = 1
+        """
         C_ml = [[0],
                 [0, 0, 0],
                 [0, 0, 0, 0, 0],
@@ -139,6 +142,10 @@ field plots:
         return C_ml
 
     def generate_temp_map(m, l, A_B=0):
+        """
+        Return a temperature field map where C_ml terms are zero except for
+        C_{m, l} = 1
+        """
         C_ml = indexer(m, l)
         model = Model(hotspot_offset, alpha, np.exp(ln_omega_drag), A_B,
                       C_ml, lmax, planet=p, filt=filt)
@@ -150,16 +157,21 @@ and we'll build the plot:
 
 .. jupyter-execute::
 
+    # Run `indexer` once to get the shape of the C_ml list
     example = indexer(1, 0)
     fig, ax = plt.subplots(len(example), len(example[-1]), figsize=(20, 10))
 
+    # Iterate over `m` from 0 to lmax
     for m in range(0, lmax + 1):
+        # Iterate over `l`  from `-m` to `m`
         for l in range(-m, m + 1):
             temperature = generate_temp_map(m, l)
 
-            cax = ax[m, l + len(example[-1])//2].imshow(temperature)
+            # Plot the temperature field
+            ax[m, l + len(example[-1])//2].imshow(temperature)
             ax[m, l + len(example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
 
+    # Turn off x, y axes for all subplots
     for i in range(len(example)):
         for j in range(len(example[-1])):
             ax[i, j].axis('off')
