@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from numba import njit
+# from numba import njit
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
@@ -10,7 +10,7 @@ import astropy.units as u
 __all__ = ['Model']
 
 
-@njit
+# @njit
 def mu(theta):
     r"""
     Angle :math:`\mu = \cos(\theta)`
@@ -23,7 +23,7 @@ def mu(theta):
     return np.cos(theta)
 
 
-@njit
+# @njit
 def tilda_mu(theta, alpha):
     r"""
     The normalized quantity
@@ -39,7 +39,7 @@ def tilda_mu(theta, alpha):
     return alpha * mu(theta)
 
 
-@njit
+# @njit
 def H(l, theta, alpha):
     r"""
     Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
@@ -183,16 +183,12 @@ class Model(object):
             raise NotImplementedError('H only implemented to l=7, l={0}'
                                       .format(l))
 
-    def h_ml(self, omega_drag, alpha, m, l, theta, phi):
+    def h_ml(self, m, l, theta, phi):
         r"""
         The :math:`h_{m\ell}` basis function.
 
         Parameters
         ----------
-        omega_drag : float
-            Dimensionless drag
-        alpha : float
-            Dimensionless fluid number
         m : int
             Spherical harmonic ``m`` index
         l : int
@@ -211,12 +207,13 @@ class Model(object):
             return 0 * np.zeros((theta.shape[1], phi.shape[0]))
 
         prefactor = (self.C_ml[l][m] /
-                     (omega_drag ** 2 * alpha ** 4 + m ** 2) *
+                     (self.omega_drag ** 2 * self.alpha ** 4 + m ** 2) *
                      np.exp(-self.tilda_mu(theta) ** 2 / 2))
 
         a = self.mu(theta) * m * self.H(l, theta) * np.cos(m * phi)
 
-        b = alpha * omega_drag * (self.tilda_mu(theta) * self.H(l, theta) -
+        b = self.alpha * self.omega_drag * (self.tilda_mu(theta) *
+                                            self.H(l, theta) -
                                   self.H(l + 1, theta))
 
         c = np.sin(m * phi)
@@ -245,7 +242,7 @@ class Model(object):
 
         for l in range(1, self.lmax + 1):
             for m in range(-l, l + 1):
-                h_ml_sum += self.h_ml(self.omega_drag, self.alpha, m, l,
+                h_ml_sum += self.h_ml(m, l,
                                       theta2d, phi2d + phase_offset +
                                       self.hotspot_offset)
         T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
