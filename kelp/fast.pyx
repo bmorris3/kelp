@@ -142,7 +142,7 @@ def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
     cdef Py_ssize_t phi_max = phi2d.shape[0]
     cdef Py_ssize_t l, m, i, j
     cdef float Cml, tmp, phase_offset = pi / 2
-    hml_sum = np.zeros((phi_max, theta_max), dtype=DTYPE)
+    hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
     cdef double[:, ::1] h_ml_sum_view = hml_sum
 
     for l in range(1, lmax + 1):
