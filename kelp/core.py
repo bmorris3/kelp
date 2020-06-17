@@ -211,7 +211,7 @@ class Model(object):
 
         b = self.alpha * self.omega_drag * (self.tilda_mu(theta) *
                                             self.H(l, theta) -
-                                  self.H(l + 1, theta))
+                                            self.H(l + 1, theta))
 
         c = np.sin(m * phi)
         hml = prefactor * (a + b * c)
