@@ -5,8 +5,8 @@ kelp
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 
-.. image:: https://travis-ci.org/bmorris3/kelp.svg?branch=master
-    :target: https://travis-ci.org/bmorris3/kelp
+.. image:: https://www.travis-ci.com/bmorris3/kelp.svg?branch=master
+    :target: https://www.travis-ci.com/bmorris3/kelp
 
 .. image:: https://readthedocs.org/projects/kelp/badge/?version=latest
     :target: https://kelp.readthedocs.io/en/latest/?badge=latest
