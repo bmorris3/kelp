@@ -3,9 +3,9 @@ cimport numpy as np
 cimport cython
 from cython.parallel import prange
 
-from libc.math cimport sin, cos, exp
+from libc.math cimport sin, cos, exp, pi
 
-__all__ = ["h_ml_cython"]
+__all__ = ["h_ml_sum_cy"]
 
 DTYPE = np.float64
 
@@ -83,8 +83,10 @@ cdef float H(int l, float theta, float alpha) nogil:
                 1680 * tilda_mu(theta, alpha))
 
 @cython.boundscheck(False)
-def h_ml_cython(float omega_drag, float alpha, int m, int l, double [:, :] theta,
-                double [:, :] phi, float C):
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
+                       float phi, float C) nogil:
     r"""
     The :math:`h_{m\ell}` basis function.
 
@@ -110,32 +112,46 @@ def h_ml_cython(float omega_drag, float alpha, int m, int l, double [:, :] theta
     hml : `~numpy.ndarray`
         :math:`h_{m\ell}` basis function.
     """
-    cdef Py_ssize_t theta_max = theta.shape[1]
-    cdef Py_ssize_t phi_max = phi.shape[0]
-
-    result = np.zeros((theta.shape[1], phi.shape[0]), dtype=DTYPE)
-    cdef double[:, :] result_view = result
+    cdef float result = 0
 
     if m == 0:
         return result
 
-    cdef int i, j
     cdef float prefactor
 
-    for i in prange(theta_max, nogil=True):
-        for j in range(phi_max):
-            prefactor = (C /
-                         (omega_drag ** 2 * alpha ** 4 + m ** 2) *
-                         exp(-tilda_mu(theta[i, j], alpha) ** 2 / 2))
+    prefactor = (C /
+                 (omega_drag ** 2 * alpha ** 4 + m ** 2) *
+                 exp(-tilda_mu(theta, alpha) ** 2 / 2))
 
-            result_view[i, j] = prefactor * (mu(theta[i, j]) * m *
-                                        H(l, theta[i, j], alpha) *
-                                        cos(m * phi[i, j]) +
-                                          alpha * omega_drag *
-                                        (tilda_mu(theta[i, j], alpha) *
-                                         H(l, theta[i, j], alpha) -
-                                         H(l + 1, theta[i, j], alpha)) *
-                                          sin(m * phi[i, j]))
-    return np.transpose(result)
+    result = prefactor * (mu(theta) * m * H(l, theta, alpha) * cos(m * phi) +
+                          alpha * omega_drag * (tilda_mu(theta, alpha) *
+                                                H(l, theta, alpha) -
+                                                H(l + 1, theta, alpha)) *
+                          sin(m * phi))
+    return result
 
+@cython.boundscheck(False)
+def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
+                double [:, :] theta2d, double [:, :] phi2d, list C,
+                int lmax):
+    cdef Py_ssize_t theta_max = theta2d.shape[1]
+    cdef Py_ssize_t phi_max = phi2d.shape[0]
+    cdef Py_ssize_t l, m, i, j
+    cdef float Cml, tmp, phase_offset = pi / 2
+    hml_sum = np.zeros((phi_max, theta_max), dtype=DTYPE)
+    cdef double[:, ::1] h_ml_sum_view = hml_sum
 
+    for l in range(1, lmax + 1):
+        for m in range(-l, l + 1):
+            Cml = C[l][m]
+            if Cml != 0:
+                for i in prange(phi_max, nogil=True):
+                    for j in range(theta_max):
+                        tmp = h_ml_cython(omega_drag, alpha,
+                                          m, l, theta2d[i, j],
+                                          phi2d[i, j] +
+                                          phase_offset +
+                                          hotspot_offset,
+                                          Cml)
+                        h_ml_sum_view[j, i] = h_ml_sum_view[j, i] + tmp
+    return hml_sum
