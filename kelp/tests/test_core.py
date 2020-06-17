@@ -2,9 +2,6 @@ import numpy as np
 from ..core import Model
 from ..registries import Filter
 
-def test_example():
-    assert True
-
 
 def test_cython():
     filt = Filter.from_name('IRAC 1')
@@ -13,10 +10,7 @@ def test_cython():
             [0, 1, 0]]
     model = Model(0, 0.5, 20, 0, C_ml, lmax, 15, 1e-3, 5770, filt=filt)
 
-    m = 1
-    l = 1
     n_phi = n_theta = 25
-    f = 2 ** -0.5
 
     T0 = model.temperature_map(n_theta, n_phi, cython=False)[0]
     T1 = model.temperature_map(n_theta, n_phi, cython=True)[0]
