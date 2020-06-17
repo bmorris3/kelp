@@ -6,9 +6,12 @@ Representing a planetary system with the :math:`h_{m\ell}` basis
 
 First, we'll import the necessary packages:
 
+.. jupyter-kernel:: python3
+    :id: gettingstarted
+
 .. jupyter-execute::
 
-    %matplotlib inline
+    %matplotlib inline  # doctest: +SKIP
     import matplotlib.pyplot as plt
     import numpy as np
 
@@ -100,7 +103,7 @@ packages:
 
 .. jupyter-execute::
 
-    %matplotlib inline
+    %matplotlib inline  # doctest: +SKIP
     import matplotlib.pyplot as plt
     import numpy as np
     import astropy.units as u

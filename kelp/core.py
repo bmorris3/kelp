@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-# from numba import njit
+from .fast import h_ml_sum_cy
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
@@ -10,7 +10,6 @@ import astropy.units as u
 __all__ = ['Model']
 
 
-# @njit
 def mu(theta):
     r"""
     Angle :math:`\mu = \cos(\theta)`
@@ -23,7 +22,6 @@ def mu(theta):
     return np.cos(theta)
 
 
-# @njit
 def tilda_mu(theta, alpha):
     r"""
     The normalized quantity
@@ -39,7 +37,6 @@ def tilda_mu(theta, alpha):
     return alpha * mu(theta)
 
 
-# @njit
 def H(l, theta, alpha):
     r"""
     Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
@@ -220,7 +217,7 @@ class Model(object):
         hml = prefactor * (a + b * c)
         return hml.T
 
-    def temperature_map(self, n_theta, n_phi, f=2**-0.5):
+    def temperature_map(self, n_theta, n_phi, f=2**-0.5, cython=True):
         """
         Temperature map as a function of latitude (theta) and longitude (phi).
 
@@ -232,19 +229,30 @@ class Model(object):
             Number of grid points in longitude
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
+        cython : bool
+            Use cython implementation of the hml basis. Default is True,
+            yields a factor of ~two speedup.
         """
         phase_offset = np.pi / 2
         phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
 
         theta2d, phi2d = np.meshgrid(theta, phi)
-        h_ml_sum = np.zeros((n_theta, n_phi))
 
-        for l in range(1, self.lmax + 1):
-            for m in range(-l, l + 1):
-                h_ml_sum += self.h_ml(m, l,
-                                      theta2d, phi2d + phase_offset +
-                                      self.hotspot_offset)
+        if cython:
+            # Cython alternative to the pure python implementation:
+            h_ml_sum = h_ml_sum_cy(self.hotspot_offset, self.omega_drag, self.alpha,
+                                   theta2d, phi2d, self.C_ml, self.lmax)
+        else:
+            # Slow loops, which have since been cythonized:
+            h_ml_sum = np.zeros((n_theta, n_phi))
+
+            for l in range(1, self.lmax + 1):
+                for m in range(-l, l + 1):
+                    h_ml_sum += self.h_ml(m, l,
+                                          theta2d, phi2d + phase_offset +
+                                          self.hotspot_offset)
+
         T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
 
         T = T_eq * (1 - self.A_B)**0.25 * (1 + h_ml_sum)

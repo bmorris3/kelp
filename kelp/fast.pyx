@@ -134,6 +134,10 @@ cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
 def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
                 double [:, :] theta2d, double [:, :] phi2d, list C,
                 int lmax):
+    """
+    Cythonized implementation of the quadruple loop over: theta's, phi's,
+    l's and m's to compute the h_ml_sum term at C speeds
+    """
     cdef Py_ssize_t theta_max = theta2d.shape[1]
     cdef Py_ssize_t phi_max = phi2d.shape[0]
     cdef Py_ssize_t l, m, i, j
