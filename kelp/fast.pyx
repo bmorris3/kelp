@@ -5,8 +5,9 @@ from cython.parallel import prange
 
 from libc.math cimport sin, cos, exp, pi
 
-__all__ = ["h_ml_sum_cy", "blackbody", "trapz3d", "blackbody2d",
-           "bilinear_interpolate", "integrate_planck", "integrated_blackbody"]
+__all__ = ["h_ml_sum_cy", "blackbody", "trapz3d", #"blackbody2d",
+           "bilinear_interpolate",
+           "integrate_planck", "integrated_blackbody"]
 
 DTYPE = np.float64
 
@@ -144,7 +145,7 @@ def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
     cdef Py_ssize_t l, m, i, j
     cdef float Cml, tmp, phase_offset = pi / 2
     hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
-    cdef double[:, ::1] h_ml_sum_view = hml_sum
+    cdef double [:, ::1] h_ml_sum_view = hml_sum
 
     for l in range(1, lmax + 1):
         for m in range(-l, l + 1):
@@ -160,52 +161,6 @@ def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
                                           Cml)
                         h_ml_sum_view[j, i] = h_ml_sum_view[j, i] + tmp
     return hml_sum
-
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# cdef bisect_right(list a, float x):
-#     """Return the index where to insert item x in list a, assuming a is sorted.
-#     The return value i is such that all e in a[:i] have e <= x, and all e in
-#     a[i:] have e > x.  So if x already appears in the list, a.insert(x) will
-#     insert just after the rightmost x already there.
-#     Optional args lo (default 0) and hi (default len(a)) bound the
-#     slice of a to be searched.
-#
-#     Source: https://github.com/python/cpython/blob/3.8/Lib/bisect.py
-#     """
-#     cdef int mid, lo = 0
-#     cdef int hi = len(a)
-#
-#     while lo < hi:
-#         mid = (lo + hi) // 2
-#         if x < a[mid]:
-#             hi = mid
-#         else:
-#             lo = mid + 1
-#     return lo
-#
-#
-# cdef class Interpolate:
-#     """
-#     Simple pure-Python implementation of linear interpolation
-#
-#     Source: https://stackoverflow.com/a/56233642/1340208
-#     """
-#     cdef object x_list, y_list, slopes
-#
-#     def __cinit__(self, list x_list, list y_list):
-#         # if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
-#         #     raise ValueError("x_list must be in strictly ascending order!")
-#         self.x_list = x_list
-#         self.y_list = y_list
-#         intervals = zip(x_list, x_list[1:], y_list, y_list[1:])
-#         self.slopes = [(y2 - y1) / (x2 - x1) for x1, x2, y1, y2 in intervals]
-#
-#     cpdef double interp(self, x) except *:
-#         if x == self.x_list[-1]:
-#             return self.y_list[-1]
-#         i = bisect_right(self.x_list, x) - 1
-#         return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -239,7 +194,7 @@ def blackbody(double [:] wavelengths, float temperature):
     """
     cdef Py_ssize_t i, n=len(wavelengths)
     planck = np.zeros(n, dtype=DTYPE)
-    cdef double[::1] planck_view = planck
+    cdef double [::1] planck_view = planck
 
     for i in prange(n, nogil=True):
         planck_view[i] = blackbody_lambda(wavelengths[i], temperature)
@@ -248,7 +203,7 @@ def blackbody(double [:] wavelengths, float temperature):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def blackbody2d(double [:] wavelengths, double [:, :] temperature):
+cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
     """
     Planck function evaluated for a vector of wavelengths in units of meters
     and temperature in units of Kelvin
@@ -268,9 +223,9 @@ def blackbody2d(double [:] wavelengths, double [:, :] temperature):
     cdef Py_ssize_t i, j, k, l=temperature.shape[0], m=temperature.shape[1]
     cdef Py_ssize_t n=len(wavelengths)
     planck = np.zeros((n, l, m), dtype=DTYPE)
-    cdef double[:, :, ::1] planck_view = planck
+    cdef double [:, :, :] planck_view = planck
 
-    for i in range(n):
+    for i in prange(n, nogil=True):
         for j in range(l):
             for k in range(m):
                 planck_view[i, j, k] = blackbody_lambda(wavelengths[i],
@@ -297,13 +252,13 @@ def trapz(double [:] y, double [:] x):
 @cython.cdivision(True)
 def trapz3d(double [:, :, :] y_3d, double [:] x):
     """
-    Pure cython version of trapezoid rule
+    Pure cython version of trapezoid rule in ~more dimensions~
     """
     cdef Py_ssize_t i, j, k, l = len(x), m = y_3d.shape[1], n = y_3d.shape[2]
     # cdef float s = 0
 
     s = np.zeros((m, n), dtype=DTYPE)
-    cdef double[:, :] s_view = s
+    cdef double [:, :] s_view = s
 
     for k in range(m):
         for j in range(n):
@@ -322,7 +277,7 @@ cdef int argmin(double [:] arr, float value):
 
     for i in range(n):
         dist = abs(arr[i] - value)
-        if dist < min_dist:
+        if dist < min_dist and value > arr[i]:
             min_dist = dist
             min_ind = i
 
@@ -330,9 +285,11 @@ cdef int argmin(double [:] arr, float value):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.cdivision(True)
+# cdef float bilinear_interpolate(double [:, :] im,
 def bilinear_interpolate(double [:, :] im,
-                         double [:] x_grid, double [:] y_grid,
-                         float y, float x):
+                                double [:] x_grid, double [:] y_grid,
+                                float y, float x):
     """
     Source: https://stackoverflow.com/a/12729229/1340208
     """
@@ -341,6 +298,11 @@ def bilinear_interpolate(double [:, :] im,
     cdef float Ia, Ib, Ic, Id, wa, wb, wc, wd
     minind0 = min([argmin(x_grid, x), len(x_grid) - 1])
     minind1 = min([argmin(y_grid, y), len(y_grid) - 1])
+
+    # minind0 = argmin(x_grid, x)
+    # minind1 = argmin(y_grid, y)
+
+    # print('minind', minind1, len(y_grid), np.max(y_grid))
 
     x0 = x_grid[minind0]
     x1 = x_grid[minind0 + 1]
@@ -357,66 +319,37 @@ def bilinear_interpolate(double [:, :] im,
     wc = (x-x0) * (y1-y)
     wd = (x-x0) * (y-y0)
 
-    return wa*Ia + wb*Ib + wc*Ic + wd*Id
-
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# cdef float GetBilinearPixel(double [:, :] imArr, float posX, float posY):
-#
-#     cdef int modXi, modYi, modXiPlusOneLim, modYiPlusOneLim
-#     cdef float modXf, modYf
-#
-#     #Get integer and fractional parts of numbers
-#     modXi = int(posX)
-#     modYi = int(posY)
-#     modXf = posX - modXi
-#     modYf = posY - modYi
-#     modXiPlusOneLim = min(modXi+1, imArr.shape[1]-1)
-#     modYiPlusOneLim = min(modYi+1, imArr.shape[0]-1)
-#
-#     #Get pixels in four corners
-#     bl = imArr[modYi, modXi]
-#     br = imArr[modYi, modXiPlusOneLim]
-#     tl = imArr[modYiPlusOneLim, modXi]
-#     tr = imArr[modYiPlusOneLim, modXiPlusOneLim]
-#
-#     #Calculate interpolation
-#     b = modXf * br + (1. - modXf) * bl
-#     t = modXf * tr + (1. - modXf) * tl
-#     pxf = modYf * t + (1. - modYf) * b
-#
-#     return pxf+0.5
-#
-# def bilinear_interpolate(double [:, :] im,
-#                          double [:] x_grid, double [:] y_grid,
-#                          float y, float x):
-#
-#     return GetBilinearPixel(im, x, y)
+    return (wa*Ia + wb*Ib + wc*Ic + wd*Id) / ((x1 - x0) * (y1 - y0))
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.cdivision(True)
 def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
                      double [:, :] temperature, double [:, :] T_s,
-                     double [:] theta_grid, double [:] phi_grid, float rp_rs):
+                     double [:] theta_grid, double [:] phi_grid, float rp_rs,
+                     int n_phi):
     # cdef Py_ssize_t i, j, l = len(theta_grid), m = len(phi_grid)
 
     bb_num = blackbody2d(filt_wavelength, temperature)
     bb_den = blackbody2d(filt_wavelength, T_s)
+    cdef int i, j, k
+    cdef Py_ssize_t l = len(filt_wavelength), m = len(theta_grid), n = len(phi_grid)
+    bb = np.zeros((l, m, n), dtype=DTYPE)
+    cdef double [:, :, ::1] bb_view = bb
+    cdef double [:, :, ::1] bb_num_view = bb_num
+    cdef double [:, :, ::1] bb_den_view = bb_den
 
-    # bb_ratio = np.zeros((l, m), dtype=DTYPE)
-    # cdef double [:, :] bb_ratio_view = bb_ratio
-    #
-    # for i in range(l):
-    #     for j in range(m):
-    #         bb_ratio_view[i, j] = bb_num[i, j] / bb_den[i, j]
+    for k in range(l):
+        for i in range(m):
+            for j in range(n):
+                bb_view[k, i, j] = (bb_num_view[k, i, j] /
+                                    bb_den_view[k, i, j] *
+                                    filt_trans[k])
 
-    bb_ratio = bb_num / bb_den
-
-    int_bb = trapz3d(bb_ratio * filt_trans[:, None, None],
-                     filt_wavelength).T
+    int_bb = trapz3d(bb, filt_wavelength).T
 
     def interp(theta, phi, theta_grid=theta_grid, phi_grid=phi_grid,
-               rp_rs=rp_rs):
+               rp_rs=rp_rs, int_bb=int_bb):
         return bilinear_interpolate(int_bb, phi_grid, theta_grid,
                                     theta, phi) * rp_rs ** 2
     return int_bb, interp
@@ -429,8 +362,8 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
                          int n_theta, int n_phi, double [:] filt_wavelength,
                          double [:] filt_transmittance, float f=2**-0.5):
     cdef float T_eq, rp_rs
-    phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=DTYPE)
-    theta = np.linspace(0, np.pi, n_theta, dtype=DTYPE)
+    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
 
@@ -447,6 +380,6 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
     int_bb, func = integrate_planck(filt_wavelength,
                                     filt_transmittance, T,
                                     T_s * np.ones_like(T),
-                                    theta, phi, rp_rs)
+                                    theta, phi, rp_rs, n_phi)
 
     return int_bb, func

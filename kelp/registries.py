@@ -140,7 +140,7 @@ class Filter(object):
 
         return ax
 
-    def bin_down(self, bins=15):
+    def bin_down(self, bins=5):
         """
         Bin down the filter bandpass wavelengths and transmittances (shortcut
         for faster integration over the bandpass).

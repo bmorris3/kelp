@@ -1,8 +1,10 @@
+from math import sin, cos
+
 import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from .fast import h_ml_sum_cy, blackbody2d, trapz3d, bilinear_interpolate, integrate_planck, integrated_blackbody
+from .fast import h_ml_sum_cy, integrated_blackbody
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
@@ -282,11 +284,6 @@ class Model(object):
         rp_rs = self.rp_a * self.a_rs
 
         if cython:
-            # int_bb, func = integrate_planck(self.filt.wavelength.to(u.m).value,
-            #                                 self.filt.transmittance, T,
-            #                                 self.T_s * np.ones_like(T),
-            #                                 theta_grid, phi_grid, rp_rs)
-
             int_bb, func = integrated_blackbody(self.hotspot_offset,
                                                 self.omega_drag,
                                                 self.alpha, self.C_ml, self.lmax,
@@ -295,12 +292,7 @@ class Model(object):
                                                 self.filt.wavelength.to(u.m).value,
                                                 self.filt.transmittance,
                                                 f=f)
-            phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=np.float64)
-            theta = np.linspace(0, np.pi, n_theta, dtype=np.float64)
-            interp_bb = RectBivariateSpline(theta, phi, int_bb.T,
-                                            kx=1, ky=1)
-            return lambda theta, phi: interp_bb(theta, phi)[0][0] * rp_rs**2
-            # return func
+            return func
 
         else:
             T, theta_grid, phi_grid = self.temperature_map(n_theta, n_phi, f,
@@ -367,8 +359,8 @@ class Model(object):
         interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
 
         def integrand(phi, theta, xi):
-            return (interp_blackbody(theta, phi) * np.sin(theta)**2 *
-                    np.cos(phi + xi))
+            return (interp_blackbody(theta, phi) * sin(theta)**2 *
+                    cos(phi + xi))
 
         fluxes = np.zeros(len(xi))
         for i in range(len(xi)):
