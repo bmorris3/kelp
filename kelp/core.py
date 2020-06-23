@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from .fast import h_ml_sum_cy
+from .fast import h_ml_sum_cy, blackbody2d, trapz3d, bilinear_interpolate, integrate_planck, integrated_blackbody
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
@@ -260,11 +260,9 @@ class Model(object):
 
         return T, theta, phi
 
-    def integrated_blackbody(self, n_theta, n_phi, f=2**-0.5):
+    def integrated_blackbody(self, n_theta, n_phi, f=2**-0.5, cython=True):
         """
         Integral of the blackbody function convolved with a filter bandpass.
-
-        Time for WASP-121 benchmark test: 63.7 ms
 
         Parameters
         ----------
@@ -281,23 +279,48 @@ class Model(object):
             Interpolation function for the blackbody map as a function of
             latitude (theta) and longitude (phi)
         """
-        T, theta, phi = self.temperature_map(n_theta, n_phi, f)
-        if (T < 0).any():
-            return lambda theta, phi: np.inf
-
-        bb_t = BlackBody(temperature=T * u.K)
-        bb_ts = BlackBody(temperature=self.T_s * u.K)
-
-        bb_ratio = (bb_t(self.filt.wavelength[:, None, None]) /
-                    bb_ts(self.filt.wavelength[:, None, None]))
-
-        int_bb = np.trapz(bb_ratio *
-                          self.filt.transmittance[:, None, None],
-                          self.filt.wavelength.value, axis=0
-                          ).value
         rp_rs = self.rp_a * self.a_rs
-        interp_bb = RectBivariateSpline(theta, phi, int_bb * rp_rs**2)
-        return lambda theta, phi: interp_bb(theta, phi)[0][0]
+
+        if cython:
+            # int_bb, func = integrate_planck(self.filt.wavelength.to(u.m).value,
+            #                                 self.filt.transmittance, T,
+            #                                 self.T_s * np.ones_like(T),
+            #                                 theta_grid, phi_grid, rp_rs)
+
+            int_bb, func = integrated_blackbody(self.hotspot_offset,
+                                                self.omega_drag,
+                                                self.alpha, self.C_ml, self.lmax,
+                                                self.T_s, self.a_rs, self.rp_a,
+                                                self.A_B, n_theta, n_phi,
+                                                self.filt.wavelength.to(u.m).value,
+                                                self.filt.transmittance,
+                                                f=f)
+            phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=np.float64)
+            theta = np.linspace(0, np.pi, n_theta, dtype=np.float64)
+            interp_bb = RectBivariateSpline(theta, phi, int_bb.T,
+                                            kx=1, ky=1)
+            return lambda theta, phi: interp_bb(theta, phi)[0][0] * rp_rs**2
+            # return func
+
+        else:
+            T, theta_grid, phi_grid = self.temperature_map(n_theta, n_phi, f,
+                                                           cython=cython)
+            if (T < 0).any():
+                return lambda theta, phi: np.inf
+
+            bb_t = BlackBody(temperature=T * u.K)
+            bb_ts = BlackBody(temperature=self.T_s * u.K)
+
+            bb_ratio = (bb_t(self.filt.wavelength[:, None, None]) /
+                        bb_ts(self.filt.wavelength[:, None, None]))
+
+            int_bb = np.trapz(bb_ratio *
+                              self.filt.transmittance[:, None, None],
+                              self.filt.wavelength.to(u.m).value, axis=0
+                              ).value
+            interp_bb = RectBivariateSpline(theta_grid, phi_grid, int_bb,
+                                            kx=1, ky=1)
+            return lambda theta, phi: interp_bb(theta, phi)[0][0] * rp_rs**2
 
     def reflected(self, xi):
         """
@@ -317,7 +340,7 @@ class Model(object):
         return (self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) +
                 (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
 
-    def phase_curve(self, xi, n_theta=30, n_phi=30, f=1 / np.sqrt(2),
+    def phase_curve(self, xi, n_theta=30, n_phi=30, f=2**-0.5, cython=True,
                     reflected=False):
         r"""
         Compute the thermal phase curve of the system as a function
@@ -341,7 +364,7 @@ class Model(object):
         fluxes : `~numpy.ndarray`
             System fluxes as a function of phase angle :math:`\xi`.
         """
-        interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f)
+        interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
 
         def integrand(phi, theta, xi):
             return (interp_blackbody(theta, phi) * np.sin(theta)**2 *
