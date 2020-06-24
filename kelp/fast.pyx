@@ -5,8 +5,8 @@ from cython.parallel import prange
 
 from libc.math cimport sin, cos, exp, pi
 
-__all__ = ["h_ml_sum_cy", "blackbody", "trapz3d", #"blackbody2d",
-           "bilinear_interpolate",
+__all__ = ["h_ml_sum_cy", "blackbody",# "trapz3d", #"blackbody2d",
+           #"bilinear_interpolate",
            "integrate_planck", "integrated_blackbody"]
 
 DTYPE = np.float64
@@ -144,7 +144,7 @@ def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
     cdef Py_ssize_t phi_max = phi2d.shape[0]
     cdef Py_ssize_t l, m, i, j
     cdef float Cml, tmp, phase_offset = pi / 2
-    hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
+    cdef np.ndarray hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
     cdef double [:, ::1] h_ml_sum_view = hml_sum
 
     for l in range(1, lmax + 1):
@@ -193,7 +193,7 @@ def blackbody(double [:] wavelengths, float temperature):
         Planck function evaluated at each wavelength
     """
     cdef Py_ssize_t i, n=len(wavelengths)
-    planck = np.zeros(n, dtype=DTYPE)
+    cdef np.ndarray planck = np.zeros(n, dtype=DTYPE)
     cdef double [::1] planck_view = planck
 
     for i in prange(n, nogil=True):
@@ -222,7 +222,7 @@ cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
     """
     cdef Py_ssize_t i, j, k, l=temperature.shape[0], m=temperature.shape[1]
     cdef Py_ssize_t n=len(wavelengths)
-    planck = np.zeros((n, l, m), dtype=DTYPE)
+    cdef np.ndarray planck = np.zeros((n, l, m), dtype=DTYPE)
     cdef double [:, :, :] planck_view = planck
 
     for i in prange(n, nogil=True):
@@ -250,14 +250,14 @@ def trapz(double [:] y, double [:] x):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def trapz3d(double [:, :, :] y_3d, double [:] x):
+cdef np.ndarray trapz3d(double [:, :, :] y_3d, double [:] x):
     """
     Pure cython version of trapezoid rule in ~more dimensions~
     """
     cdef Py_ssize_t i, j, k, l = len(x), m = y_3d.shape[1], n = y_3d.shape[2]
     # cdef float s = 0
 
-    s = np.zeros((m, n), dtype=DTYPE)
+    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, :] s_view = s
 
     for k in range(m):
@@ -286,8 +286,7 @@ cdef int argmin(double [:] arr, float value):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-# cdef float bilinear_interpolate(double [:, :] im,
-def bilinear_interpolate(double [:, :] im,
+cdef float bilinear_interpolate(double [:, :] im,
                                 double [:] x_grid, double [:] y_grid,
                                 float y, float x):
     """
@@ -334,7 +333,7 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
     bb_den = blackbody2d(filt_wavelength, T_s)
     cdef int i, j, k
     cdef Py_ssize_t l = len(filt_wavelength), m = len(theta_grid), n = len(phi_grid)
-    bb = np.zeros((l, m, n), dtype=DTYPE)
+    cdef np.ndarray bb = np.zeros((l, m, n), dtype=DTYPE)
     cdef double [:, :, ::1] bb_view = bb
     cdef double [:, :, ::1] bb_num_view = bb_num
     cdef double [:, :, ::1] bb_den_view = bb_den
@@ -362,8 +361,8 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
                          int n_theta, int n_phi, double [:] filt_wavelength,
                          double [:] filt_transmittance, float f=2**-0.5):
     cdef float T_eq, rp_rs
-    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
-    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    cdef np.ndarray phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    cdef np.ndarray theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
 
