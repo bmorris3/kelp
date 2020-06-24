@@ -281,7 +281,6 @@ class Model(object):
             Interpolation function for the blackbody map as a function of
             latitude (theta) and longitude (phi)
         """
-        rp_rs = self.rp_a * self.a_rs
 
         if cython:
             int_bb, func = integrated_blackbody(self.hotspot_offset,
