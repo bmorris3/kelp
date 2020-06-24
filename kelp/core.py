@@ -4,7 +4,7 @@ import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from .fast import h_ml_sum_cy, integrated_blackbody
+from .fast import h_ml_sum_cy, integrated_blackbody, phase_curve
 
 from astropy.modeling.models import BlackBody
 import astropy.units as u
@@ -292,7 +292,7 @@ class Model(object):
                                                 self.filt.wavelength.to(u.m).value,
                                                 self.filt.transmittance,
                                                 f=f)
-            return func
+            return int_bb, func
 
         else:
             T, theta_grid, phi_grid = self.temperature_map(n_theta, n_phi, f,
@@ -312,7 +312,7 @@ class Model(object):
                               ).value
             interp_bb = RectBivariateSpline(theta_grid, phi_grid, int_bb,
                                             kx=1, ky=1)
-            return lambda theta, phi: interp_bb(theta, phi)[0][0] * rp_rs**2
+            return lambda theta, phi: interp_bb(theta, phi)[0][0]
 
     def reflected(self, xi):
         """
@@ -333,7 +333,7 @@ class Model(object):
                 (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
 
     def phase_curve(self, xi, n_theta=30, n_phi=30, f=2**-0.5, cython=True,
-                    reflected=False):
+                    reflected=False, quad=False):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
@@ -350,24 +350,43 @@ class Model(object):
             Greenhouse parameter (typically 1/sqrt(2)).
         reflected : bool
             Include reflected light component
+        cython : bool
+            Use Cython implementation of the `integrated_blackbody` function
+            (deprecated). Default is True.
+        quad : bool
+            Use `dblquad` to integrate the temperature map if True,
+            else use trapezoidal approximation.
 
         Returns
         -------
         fluxes : `~numpy.ndarray`
             System fluxes as a function of phase angle :math:`\xi`.
         """
-        interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
-
-        def integrand(phi, theta, xi):
-            return (interp_blackbody(theta, phi) * sin(theta)**2 *
-                    cos(phi + xi))
-
         fluxes = np.zeros(len(xi))
-        for i in range(len(xi)):
-            fluxes[i] = dblquad(integrand, 0, np.pi,
-                                lambda x: -xi[i] - np.pi / 2,
-                                lambda x: -xi[i] + np.pi / 2,
-                                epsrel=100, args=(xi[i],))[0]
+
+        if quad:
+            int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
+
+            def integrand(phi, theta, xi):
+                return (interp_blackbody(theta, phi) * sin(theta)**2 *
+                        cos(phi + xi))
+
+            for i in range(len(xi)):
+                fluxes[i] = dblquad(integrand, 0, np.pi,
+                                    lambda x: -xi[i] - np.pi / 2,
+                                    lambda x: -xi[i] + np.pi / 2,
+                                    epsrel=100, args=(xi[i],))[0]
+
+        else:
+            fluxes = phase_curve(xi, self.hotspot_offset,
+                                 self.omega_drag,
+                                 self.alpha, self.C_ml, self.lmax,
+                                 self.T_s, self.a_rs, self.rp_a,
+                                 self.A_B, n_theta, n_phi,
+                                 self.filt.wavelength.to(u.m).value,
+                                 self.filt.transmittance,
+                                 f=f)
+
         if reflected:
             fluxes += self.reflected(xi)
 

@@ -270,7 +270,7 @@ cdef np.ndarray trapz3d(double [:, :, :] y_3d, double [:] x):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef int argmin(double [:] arr, float value):
+cdef int argmin_lowest(double [:] arr, float value):
 
     cdef int i, min_ind = 0, n = len(arr)
     cdef float dist, min_dist = 1e10
@@ -278,6 +278,21 @@ cdef int argmin(double [:] arr, float value):
     for i in range(n):
         dist = abs(arr[i] - value)
         if dist < min_dist and value > arr[i]:
+            min_dist = dist
+            min_ind = i
+
+    return min_ind
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef int argmin(double [:] arr, float value):
+
+    cdef int i, min_ind = 0, n = len(arr)
+    cdef float dist, min_dist = 1e10
+
+    for i in range(n):
+        dist = abs(arr[i] - value)
+        if dist < min_dist:
             min_dist = dist
             min_ind = i
 
@@ -295,13 +310,8 @@ cdef float bilinear_interpolate(double [:, :] im,
     cdef int minind0, minind1
     cdef float x0, x1, y0, y1
     cdef float Ia, Ib, Ic, Id, wa, wb, wc, wd
-    minind0 = min([argmin(x_grid, x), len(x_grid) - 1])
-    minind1 = min([argmin(y_grid, y), len(y_grid) - 1])
-
-    # minind0 = argmin(x_grid, x)
-    # minind1 = argmin(y_grid, y)
-
-    # print('minind', minind1, len(y_grid), np.max(y_grid))
+    minind0 = min([argmin_lowest(x_grid, x), len(x_grid) - 1])
+    minind1 = min([argmin_lowest(y_grid, y), len(y_grid) - 1])
 
     x0 = x_grid[minind0]
     x1 = x_grid[minind0 + 1]
@@ -326,7 +336,7 @@ cdef float bilinear_interpolate(double [:, :] im,
 def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
                      double [:, :] temperature, double [:, :] T_s,
                      double [:] theta_grid, double [:] phi_grid, float rp_rs,
-                     int n_phi):
+                     int n_phi, bint return_interp=True):
     # cdef Py_ssize_t i, j, l = len(theta_grid), m = len(phi_grid)
 
     bb_num = blackbody2d(filt_wavelength, temperature)
@@ -347,11 +357,14 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
 
     int_bb = trapz3d(bb, filt_wavelength).T
 
-    def interp(theta, phi, theta_grid=theta_grid, phi_grid=phi_grid,
-               rp_rs=rp_rs, int_bb=int_bb):
-        return bilinear_interpolate(int_bb, phi_grid, theta_grid,
-                                    theta, phi) * rp_rs ** 2
-    return int_bb, interp
+    if return_interp:
+        def interp(theta, phi, theta_grid=theta_grid, phi_grid=phi_grid,
+                   rp_rs=rp_rs, int_bb=int_bb):
+            return bilinear_interpolate(int_bb, phi_grid, theta_grid,
+                                        theta, phi) #* rp_rs ** 2
+        return int_bb, interp
+    else:
+        return int_bb
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -382,3 +395,121 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
                                     theta, phi, rp_rs, n_phi)
 
     return int_bb, func
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
+                float alpha, list C_ml,
+                int lmax, float T_s, float a_rs, float rp_a, float A_B,
+                int n_theta, int n_phi, double [:] filt_wavelength,
+                double [:] filt_transmittance, float f=2**-0.5):
+    cdef float T_eq, rp_rs
+    cdef int k, phi_min, phi_max, n_xi = len(xi)
+    cdef np.ndarray phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    cdef np.ndarray theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    cdef np.ndarray fluxes = np.zeros(n_xi, dtype=DTYPE)
+
+    theta2d, phi2d = np.meshgrid(theta, phi)
+    cdef double [:, ::1] theta2d_view = theta2d
+    cdef double [:, ::1] phi2d_view = phi2d
+
+    # Cython alternative to the pure python implementation:
+    h_ml_sum = h_ml_sum_cy(hotspot_offset, omega_drag,
+                           alpha, theta2d, phi2d, C_ml,
+                           lmax)
+    T_eq = f * T_s * a_rs**-0.5
+
+    T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
+
+    rp_rs = rp_a * a_rs
+
+    int_bb = integrate_planck(filt_wavelength,
+                              filt_transmittance, T,
+                              T_s * np.ones_like(T),
+                              theta, phi, rp_rs, n_phi,
+                              False)
+
+    for k in range(n_xi):
+        phi_min = argmin(phi, -xi[k] - pi/2)
+        phi_max = argmin(phi, -xi[k] + pi/2)
+
+        integrand_map = (int_bb[phi_min:phi_max] *
+                         sinsq_2d(theta2d[phi_min:phi_max]) *
+                         cos_2d(phi2d[phi_min:phi_max] + xi[k]))
+        integral = trapz2d(integrand_map, phi[phi_min:phi_max], theta)
+        fluxes[k] = integral #* rp_rs**2
+    return fluxes
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef float sum2d(double [:, :] z):
+    cdef int m = z.shape[0], n = z.shape[1]
+    cdef float s = 0
+
+    for i in range(m):
+        for j in range(n):
+            s += z[i, j]
+    return s
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef float sum1d(double [:] z):
+    cdef int m = z.shape[0]
+    cdef float s = 0
+
+    for i in range(m):
+        s += z[i]
+    return s
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef np.ndarray sinsq_2d(double [:, :] z):
+    cdef int m = z.shape[0], n = z.shape[1]
+    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
+    cdef double [:, ::1] s_view = s
+
+    for i in range(m):
+        for j in range(n):
+            s_view[i, j] = sin(z[i, j])**2
+    return s
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef np.ndarray cos_2d(double [:, :] z):
+    cdef int m = z.shape[0], n = z.shape[1]
+    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
+    cdef double [:, ::1] s_view = s
+
+    for i in range(m):
+        for j in range(n):
+            s_view[i, j] = cos(z[i, j])
+    return s
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef float trapz2d(double [:, :] z, double [:] x, double [:] y):
+    # # Source: https://www.mathworks.com/matlabcentral/fileexchange/40631-2d-trapezoidal-rule
+    #
+    # return np.trapz(np.trapz(z, y, axis=1), x)
+    """
+    Integrates a regularly spaced 2D grid using the composite trapezium rule.
+    IN:
+       z : 2D array
+       x : (optional) grid values for x (1D array)
+       y : (optional) grid values for y (1D array)
+       dx: if x is not supplied, set it to the x grid interval
+       dy: if y is not supplied, set it to the x grid interval
+    Source: https://github.com/tiagopereira/python_tips/blob/master/code/trapz2d.py
+    """
+    cdef float dx, dy, s1, s2, s3
+    cdef int m = z.shape[0] - 1, n = z.shape[1] - 1
+    dx = x[1] - x[0]
+    dy = y[1] - y[0]
+
+    s1 = z[0, 0] + z[m, 0] + z[0, n] + z[m, n]
+    s2 = sum1d(z[1:m, 0]) + sum1d(z[1:m, n]) + sum1d(z[0, 1:n]) + sum1d(z[m, 1:n])
+    s3 = sum2d(z[1:m, 1:n])
+
+    return 0.25 * dx * dy * (s1 + 2 * s2 + 4 * s3)
