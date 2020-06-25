@@ -21,14 +21,13 @@ Next we set some parameters for the model:
     hotspot_offset = 0  # hotspot offset
     alpha = 0.6         # alpha ~ 0.5
     ln_omega_drag = 0   # omega_drag ~ 1
-    ln_c11 = -5         # Spherical harmonic power C_{m=1, l=1}
-    ln_c13 = -3         # Spherical harmonic power C_{m=1, l=3}
+    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
     channel = 1         # Spitzer IRAC channel of observations
-    n_theta = 20        # number of latitudes to simulate
-    n_phi = 25          # number of longitudes to simulate
+    n_theta = 100        # number of latitudes to simulate
+    n_phi = 50          # number of longitudes to simulate
 
 We initialize a `~kelp.Planet` and `~kelp.Filter` object for the model:
 
@@ -47,9 +46,7 @@ We specify the :math:`C_{m\ell}` terms like so:
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0],
-            [0, 0, 0, 0, 0],
-            [0, -np.exp(ln_c13), 0, 0, 0, 0, 0, 0]]
+            [0, np.exp(ln_c11), 0]]
 
 Let's construct a `~kelp.Model` object,
 
@@ -58,7 +55,7 @@ Let's construct a `~kelp.Model` object,
     # Generate an h_ml basis model representation of the system:
     model = Model(hotspot_offset=hotspot_offset,
                   omega_drag=np.exp(ln_omega_drag),
-                  alpha=alpha, C_ml=C_ml, lmax=3, A_B=0,
+                  alpha=alpha, C_ml=C_ml, lmax=1, A_B=0,
                   planet=p, filt=filt)
 
 and plot the temperature map using `~kelp.Model.temperature_map`:
@@ -86,14 +83,13 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
     hotspot_offset = 0  # hotspot offset
     alpha = 0.6         # alpha ~ 0.5
     ln_omega_drag = 0   # omega_drag ~ 1
-    ln_c11 = -5         # Spherical harmonic power C_{m=1, l=1}
-    ln_c13 = -3         # Spherical harmonic power C_{m=1, l=3}
+    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
     channel = 1         # Spitzer IRAC channel of observations
-    n_theta = 20        # number of latitudes to simulate
-    n_phi = 25          # number of longitudes to simulate
+    n_theta = 100       # number of latitudes to simulate
+    n_phi = 50          # number of longitudes to simulate
 
     # Import planet properties
     p = Planet.from_name(n)
@@ -104,14 +100,12 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0],
-            [0, 0, 0, 0, 0],
-            [0, -np.exp(ln_c13), 0, 0, 0, 0, 0, 0]]
+            [0, np.exp(ln_c11), 0]]
 
     # Generate an h_ml basis model representation of the system:
     model = Model(hotspot_offset=hotspot_offset,
                   omega_drag=np.exp(ln_omega_drag),
-                  alpha=alpha, C_ml=C_ml, lmax=3, A_B=0,
+                  alpha=alpha, C_ml=C_ml, lmax=1, A_B=0,
                   planet=p, filt=filt)
 
     # Compute the temperature map:
@@ -150,14 +144,11 @@ and plot the phase curve that results from this temperature map using
     hotspot_offset = 0  # hotspot offset
     alpha = 0.6         # alpha ~ 0.5
     ln_omega_drag = 0   # omega_drag ~ 1
-    ln_c11 = -5         # Spherical harmonic power C_{m=1, l=1}
-    ln_c13 = -3         # Spherical harmonic power C_{m=1, l=3}
+    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
     channel = 1         # Spitzer IRAC channel of observations
-    n_theta = 20        # number of latitudes to simulate
-    n_phi = 25          # number of longitudes to simulate
 
     # Import planet properties
     p = Planet.from_name(n)
@@ -168,14 +159,12 @@ and plot the phase curve that results from this temperature map using
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0],
-            [0, 0, 0, 0, 0],
-            [0, -np.exp(ln_c13), 0, 0, 0, 0, 0, 0]]
+            [0, np.exp(ln_c11), 0]]
 
     # Generate an h_ml basis model representation of the system:
     model = Model(hotspot_offset=hotspot_offset,
                   omega_drag=np.exp(ln_omega_drag),
-                  alpha=alpha, C_ml=C_ml, lmax=3, A_B=0,
+                  alpha=alpha, C_ml=C_ml, lmax=1, A_B=0,
                   planet=p, filt=filt)
 
     # Compute the phase curve:
@@ -185,7 +174,7 @@ and plot the phase curve that results from this temperature map using
     # Plot the phase curve
     plt.plot(xi / np.pi, phase_curve)
     plt.xlabel('$\\xi/\\pi$')
-    plt.ylabel('$F_p/F_s$')
+    plt.ylabel('$\\rm F_p/F_s$')
     plt.show()
 
 Spherical harmonics components
@@ -213,12 +202,12 @@ field:
 
     hotspot_offset = 0
     alpha = 0.6
-    ln_omega_drag = 6
+    omega_drag = 4.5
     f = 2 ** -0.5
     lmax = 3
 
-    n_phi = 50
-    n_theta = 30
+    n_phi = 100
+    n_theta = 20
 
 next we'll write a few helper functions that will generate pretty temperature
 field plots:
@@ -242,10 +231,10 @@ field plots:
         C_{m, l} = 1
         """
         C_ml = indexer(m, l)
-        model = Model(hotspot_offset, alpha, np.exp(ln_omega_drag), A_B,
+        model = Model(hotspot_offset, alpha, omega_drag, A_B,
                       C_ml, lmax, planet=p, filt=filt)
 
-        T, _, _ = model.temperature_map(n_theta, n_phi, f)
+        T, theta, phi = model.temperature_map(n_theta, n_phi, f)
         return T
 
 and we'll build the plot:
@@ -263,8 +252,9 @@ and we'll build the plot:
             temperature = generate_temp_map(m, l)
 
             # Plot the temperature field
-            ax[m, l + len(example[-1])//2].imshow(temperature)
-            ax[m, l + len(example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
+            ax[m, l + len(example[-1])//2].pcolormesh(phi, theta, temperature)
+            ax[m, l + len(example[-1])//2].set(title=f'$m = {m},\,\ell = {l}$',
+                                               xlim=[-1, 1])
 
     # Turn off x, y axes for all subplots
     for i in range(len(example)):
@@ -286,11 +276,11 @@ and we'll build the plot:
 
     hotspot_offset = 0
     alpha = 0.6
-    ln_omega_drag = 6
+    omega_drag = 4.5
     f = 2 ** -0.5
     lmax = 3
 
-    n_phi = 50
+    n_phi = 100
     n_theta = 20
 
     def indexer(m, l):
@@ -311,7 +301,7 @@ and we'll build the plot:
         C_{m, l} = 1
         """
         C_ml = indexer(m, l)
-        model = Model(hotspot_offset, alpha, np.exp(ln_omega_drag), A_B,
+        model = Model(hotspot_offset, alpha, omega_drag, A_B,
                       C_ml, lmax, planet=p, filt=filt)
 
         return model.temperature_map(n_theta, n_phi, f)
@@ -329,8 +319,8 @@ and we'll build the plot:
 
             # Plot the temperature field
             ax[m, l + len(example[-1]) // 2].pcolormesh(phi, theta, temperature)
-            ax[m, l + len(example[-1]) // 2].set_title(f'$m = {m},\,\ell = {l}$')
-
+            ax[m, l + len(example[-1])//2].set(title=f'$m = {m},\,\ell = {l}$',
+                                               xlim=[-np.pi, np.pi])
     # Turn off x, y axes for all subplots
     for i in range(len(example)):
         for j in range(len(example[-1])):

@@ -311,7 +311,7 @@ class Model(object):
                               ).value
             interp_bb = RectBivariateSpline(theta_grid, phi_grid, int_bb,
                                             kx=1, ky=1)
-            return lambda theta, phi: interp_bb(theta, phi)[0][0]
+            return int_bb, lambda theta, phi: interp_bb(theta, phi)[0][0]
 
     def reflected(self, xi):
         """
@@ -331,7 +331,7 @@ class Model(object):
         return (self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) +
                 (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
 
-    def phase_curve(self, xi, n_theta=30, n_phi=30, f=2**-0.5, cython=True,
+    def phase_curve(self, xi, n_theta=20, n_phi=200, f=2**-0.5, cython=True,
                     reflected=False, quad=False):
         r"""
         Compute the thermal phase curve of the system as a function
@@ -361,9 +361,9 @@ class Model(object):
         fluxes : `~numpy.ndarray`
             System fluxes as a function of phase angle :math:`\xi`.
         """
-        fluxes = np.zeros(len(xi))
-
         if quad:
+            fluxes = np.zeros(len(xi))
+
             int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
 
             def integrand(phi, theta, xi):

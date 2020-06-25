@@ -9,6 +9,7 @@ __all__ = ["h_ml_sum_cy", "blackbody", "integrate_planck",
            "integrated_blackbody"]
 
 DTYPE = np.float64
+ctypedef np.float64_t DTYPE_t
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -113,12 +114,10 @@ cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
     hml : `~numpy.ndarray`
         :math:`h_{m\ell}` basis function.
     """
-    cdef float result = 0
+    cdef float prefactor, result = 0
 
     if m == 0:
         return result
-
-    cdef float prefactor
 
     prefactor = (C /
                  (omega_drag ** 2 * alpha ** 4 + m ** 2) *
@@ -133,8 +132,7 @@ cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
 
 @cython.boundscheck(False)
 def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
-                double [:, :] theta2d, double [:, :] phi2d, list C,
-                int lmax):
+                double [:, :] theta2d, double [:, :] phi2d, list C, int lmax):
     """
     Cythonized implementation of the quadruple loop over: theta's, phi's,
     l's and m's to compute the h_ml_sum term at C speeds
@@ -142,8 +140,9 @@ def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
     cdef Py_ssize_t theta_max = theta2d.shape[1]
     cdef Py_ssize_t phi_max = phi2d.shape[0]
     cdef Py_ssize_t l, m, i, j
-    cdef float Cml, tmp, phase_offset = pi / 2
-    cdef np.ndarray hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
+    cdef float Cml, phase_offset = pi / 2
+    cdef DTYPE_t tmp
+    hml_sum = np.zeros((theta_max, phi_max), dtype=DTYPE)
     cdef double [:, ::1] h_ml_sum_view = hml_sum
 
     for l in range(1, lmax + 1):
@@ -195,7 +194,7 @@ def blackbody(double [:] wavelengths, float temperature):
         Planck function evaluated at each wavelength
     """
     cdef Py_ssize_t i, n=len(wavelengths)
-    cdef np.ndarray planck = np.zeros(n, dtype=DTYPE)
+    planck = np.zeros(n, dtype=DTYPE)
     cdef double [::1] planck_view = planck
 
     for i in prange(n, nogil=True):
@@ -224,7 +223,7 @@ cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
     """
     cdef Py_ssize_t i, j, k, l=temperature.shape[0], m=temperature.shape[1]
     cdef Py_ssize_t n=len(wavelengths)
-    cdef np.ndarray planck = np.zeros((n, l, m), dtype=DTYPE)
+    planck = np.zeros((n, l, m), dtype=DTYPE)
     cdef double [:, :, :] planck_view = planck
 
     for i in prange(n, nogil=True):
@@ -252,14 +251,13 @@ def trapz(double [:] y, double [:] x):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef np.ndarray trapz3d(double [:, :, :] y_3d, double [:] x):
+cdef trapz3d(double [:, :, :] y_3d, double [:] x):
     """
     Pure cython version of trapezoid rule in ~more dimensions~
     """
     cdef Py_ssize_t i, j, k, l = len(x), m = y_3d.shape[1], n = y_3d.shape[2]
-    # cdef float s = 0
 
-    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
+    s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, :] s_view = s
 
     for k in range(m):
@@ -353,11 +351,14 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
     the ratio of the blackbodies over wavelength; else returns only the map
     (which can be used for trapezoidal approximation integration)
     """
-    bb_num = blackbody2d(filt_wavelength, temperature)
-    bb_den = blackbody2d(filt_wavelength, T_s)
+
     cdef int i, j, k
     cdef Py_ssize_t l = len(filt_wavelength), m = len(theta_grid), n = len(phi_grid)
-    cdef np.ndarray bb = np.zeros((l, m, n), dtype=DTYPE)
+    bb = np.zeros((l, m, n), dtype=DTYPE)
+
+    bb_num = blackbody2d(filt_wavelength, temperature)
+    bb_den = blackbody2d(filt_wavelength, T_s)
+
     cdef double [:, :, ::1] bb_view = bb
     cdef double [:, :, ::1] bb_num_view = bb_num
     cdef double [:, :, ::1] bb_den_view = bb_den
@@ -393,8 +394,8 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
     `integrate_planck`
     """
     cdef float T_eq, rp_rs
-    cdef np.ndarray phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
-    cdef np.ndarray theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
 
@@ -426,14 +427,14 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     Compute the phase curve evaluated at phases `xi`.
     """
     cdef float T_eq, rp_rs
+    cdef DTYPE_t integral
     cdef int k, phi_min, phi_max, n_xi = len(xi)
-    cdef np.ndarray phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
-    cdef np.ndarray theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
-    cdef np.ndarray fluxes = np.zeros(n_xi, dtype=DTYPE)
+    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    fluxes = np.zeros(n_xi, dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
-    cdef double [:, ::1] theta2d_view = theta2d
-    cdef double [:, ::1] phi2d_view = phi2d
+    cdef double [::1] fluxes_view = fluxes
 
     # Cython alternative to the pure python implementation:
     h_ml_sum = h_ml_sum_cy(hotspot_offset, omega_drag,
@@ -444,22 +445,23 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
 
     rp_rs = rp_a * a_rs
-
+    ones = np.ones_like(T)
     int_bb = integrate_planck(filt_wavelength,
                               filt_transmittance, T,
-                              T_s * np.ones_like(T),
+                              T_s * ones,
                               theta, phi, rp_rs, n_phi,
                               False)
+    cdef double [:, :] int_bb_view = int_bb
+    cdef double [:] xi_view = xi
 
     for k in range(n_xi):
-        phi_min = argmin(phi, -xi[k] - pi/2)
-        phi_max = argmin(phi, -xi[k] + pi/2)
-
-        integrand_map = (int_bb[phi_min:phi_max] *
+        phi_min = argmin(phi, -xi_view[k] - pi/2)
+        phi_max = argmin(phi, -xi_view[k] + pi/2)
+        integrand_map = (int_bb_view[phi_min:phi_max] *
                          sinsq_2d(theta2d[phi_min:phi_max]) *
-                         cos_2d(phi2d[phi_min:phi_max] + xi[k]))
+                         cos_2d(phi2d[phi_min:phi_max] + xi_view[k]))
         integral = trapz2d(integrand_map, phi[phi_min:phi_max], theta)
-        fluxes[k] = integral
+        fluxes_view[k] = integral
     return fluxes
 
 @cython.boundscheck(False)
@@ -491,12 +493,12 @@ cdef float sum1d(double [:] z):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef np.ndarray sinsq_2d(double [:, :] z):
+cdef sinsq_2d(double [:, :] z):
     """
     The square of the sine of a 2d array
     """
     cdef int m = z.shape[0], n = z.shape[1]
-    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
+    s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, ::1] s_view = s
 
     for i in range(m):
@@ -507,12 +509,12 @@ cdef np.ndarray sinsq_2d(double [:, :] z):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef np.ndarray cos_2d(double [:, :] z):
+cdef cos_2d(double [:, :] z):
     """
     The cosine of a 2d array
     """
     cdef int m = z.shape[0], n = z.shape[1]
-    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
+    s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, ::1] s_view = s
 
     for i in range(m):
