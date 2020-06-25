@@ -13,7 +13,7 @@ kelp
     :alt: Documentation Status
 
 .. image:: https://mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/bmorris3/kelp/v0.2.4?filepath=notebooks%2Fvis%2Ftemperature_map_lmax3.ipynb
+    :target: https://mybinder.org/v2/gh/bmorris3/kelp/v0.3?filepath=notebooks%2Fvis%2Ftemperature_map.ipynb
     :alt: Launch binder
     
 Photometric thermal phase curves of exoplanets.
