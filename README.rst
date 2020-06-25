@@ -11,10 +11,6 @@ kelp
 .. image:: https://readthedocs.org/projects/kelp/badge/?version=latest
     :target: https://kelp.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-
-.. image:: https://mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/bmorris3/kelp/v0.3?filepath=notebooks%2Fvis%2Ftemperature_map.ipynb
-    :alt: Launch binder
     
 Photometric thermal phase curves of exoplanets.
 
