@@ -37,4 +37,4 @@ def test_cython_phase_curve(n_theta, n_phi, rtol):
     pc0 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=True)
     pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False)
 
-    np.testing.assert_allclose(pc0, pc1, rtol=rtol)
+    np.testing.assert_allclose(pc0.flux, pc1.flux, rtol=rtol)

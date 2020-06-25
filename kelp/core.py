@@ -4,6 +4,7 @@ import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
+from .registries import PhaseCurve
 from .fast import h_ml_sum_cy, integrated_blackbody, phase_curve
 
 from astropy.modeling.models import BlackBody
@@ -364,7 +365,8 @@ class Model(object):
         if quad:
             fluxes = np.zeros(len(xi))
 
-            int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi, f, cython)
+            int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi,
+                                                                 f, cython)
 
             def integrand(phi, theta, xi):
                 return (interp_blackbody(theta, phi) * sin(theta)**2 *
@@ -389,4 +391,4 @@ class Model(object):
         if reflected:
             fluxes += self.reflected(xi)
 
-        return fluxes
+        return PhaseCurve(xi, fluxes, channel=self.filt.name)

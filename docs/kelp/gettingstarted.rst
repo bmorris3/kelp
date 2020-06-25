@@ -124,11 +124,11 @@ and plot the phase curve that results from this temperature map using
 .. code-block:: python
 
     # Compute the phase curve:
-    xi = np.linspace(-2.7, 2.7, 50)
+    xi = np.linspace(-np.pi, np.pi, 50)
     phase_curve = model.phase_curve(xi)
 
     # Plot the phase curve
-    plt.plot(xi / np.pi, phase_curve)
+    phase_curve.plot()
     plt.xlabel('$\\xi/\\pi$')
     plt.ylabel('$F_p/F_s$')
     plt.show()
@@ -168,11 +168,11 @@ and plot the phase curve that results from this temperature map using
                   planet=p, filt=filt)
 
     # Compute the phase curve:
-    xi = np.linspace(-2.7, 2.7, 50)
+    xi = np.linspace(-np.pi, np.pi, 50)
     phase_curve = model.phase_curve(xi)
 
     # Plot the phase curve
-    plt.plot(xi / np.pi, phase_curve)
+    phase_curve.plot()
     plt.xlabel('$\\xi/\\pi$')
     plt.ylabel('$\\rm F_p/F_s$')
     plt.show()
@@ -252,9 +252,10 @@ and we'll build the plot:
             temperature = generate_temp_map(m, l)
 
             # Plot the temperature field
-            ax[m, l + len(example[-1])//2].pcolormesh(phi, theta, temperature)
-            ax[m, l + len(example[-1])//2].set(title=f'$m = {m},\,\ell = {l}$',
-                                               xlim=[-1, 1])
+            axis = ax[m, l + len(example[-1]) // 2]
+            axis.pcolormesh(phi, theta, temperature)
+            axis.set(title=f'$m = {m},\,\ell = {l}$',
+                     xlim=[-np.pi, np.pi])
 
     # Turn off x, y axes for all subplots
     for i in range(len(example)):
@@ -318,9 +319,10 @@ and we'll build the plot:
             temperature, theta, phi = generate_temp_map(m, l)
 
             # Plot the temperature field
-            ax[m, l + len(example[-1]) // 2].pcolormesh(phi, theta, temperature)
-            ax[m, l + len(example[-1])//2].set(title=f'$m = {m},\,\ell = {l}$',
-                                               xlim=[-np.pi, np.pi])
+            axis = ax[m, l + len(example[-1]) // 2]
+            axis.pcolormesh(phi, theta, temperature)
+            axis.set(title=f'$m = {m},\,\ell = {l}$',
+                     xlim=[-np.pi, np.pi])
     # Turn off x, y axes for all subplots
     for i in range(len(example)):
         for j in range(len(example[-1])):

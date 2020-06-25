@@ -28,7 +28,7 @@ class Planet(object):
 
     def __init__(self, per=None, t0=None, inc=None, rp=None, ecc=None, w=None,
                  a=None, u=None, fp=None, t_secondary=None, T_s=None, rp_a=None,
-                 limb_dark='quadratic'):
+                 limb_dark='quadratic', name=None):
         self.per = per
         self.t0 = t0
         self.inc = inc
@@ -42,6 +42,7 @@ class Planet(object):
         self.t_secondary = t_secondary
         self.T_s = T_s
         self.rp_a = rp_a
+        self.name = name
 
     @classmethod
     def from_name(cls, name):
@@ -58,7 +59,7 @@ class Planet(object):
              Name of the planet
         """
 
-        return cls(**cls._planets[name])
+        return cls(name=name, **cls._planets[name])
 
     def eclipse_model(self, xi):
         r"""
@@ -92,7 +93,7 @@ class Filter(object):
     with open(filters_path, 'r') as _f:
         _filters = load(_f)
 
-    def __init__(self, wavelength, transmittance):
+    def __init__(self, wavelength, transmittance, name=None):
         """
         Parameters
         ----------
@@ -103,6 +104,7 @@ class Filter(object):
         """
         self.wavelength = wavelength
         self.transmittance = transmittance
+        self.name = name
 
     @classmethod
     def from_name(cls, name):
@@ -115,7 +117,8 @@ class Filter(object):
              Name of the filter
         """
         return cls(np.array(cls._filters[name]['wavelength']) * u.um,
-                   np.array(cls._filters[name]['transmittance']))
+                   np.array(cls._filters[name]['transmittance']),
+                   name)
 
     def plot(self, ax=None, **kwargs):
         """
@@ -135,7 +138,7 @@ class Filter(object):
         """
         if ax is None:
             ax = plt.gca()
-
+        ax.set(title=self.name)
         ax.plot(self.wavelength, self.transmittance, **kwargs)
 
         return ax
@@ -161,7 +164,7 @@ class PhaseCurve(object):
     available = []
 
     def __init__(self, xi, flux, name=None, channel=None, year=None,
-                 renormalize=True):
+                 renormalize=False):
         """
         Parameters
         ----------
@@ -255,7 +258,7 @@ class PhaseCurve(object):
         if mask is None:
             mask = np.ones_like(self.xi).astype(bool)
 
-        ax.plot(self.xi[mask], self.flux[mask], '.', **kwargs)
+        ax.plot(self.xi[mask], self.flux[mask], **kwargs)
 
         return ax
 
