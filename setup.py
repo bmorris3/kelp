@@ -7,9 +7,11 @@
 import os
 import sys
 
-from setuptools import setup
+from setuptools import setup, Extension
+from Cython.Build import cythonize
+import numpy as np
 
-from extension_helpers import get_extensions
+# from extension_helpers import get_extensions
 
 # First provide helpful messages if contributors try and run legacy commands
 # for tests or docs.
@@ -75,6 +77,17 @@ except Exception:
     version = '{version}'
 """.lstrip()
 
+ext_modules = [
+    Extension(
+        "kelp.fast",
+        ["kelp/fast.pyx"],
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp'],
+        include_dirs=[np.get_include()]
+    )
+]
 setup(use_scm_version={'write_to': os.path.join('kelp', 'version.py'),
                        'write_to_template': VERSION_TEMPLATE},
-      ext_modules=get_extensions())
+      ext_modules=cythonize(ext_modules))
+
+

@@ -1,3 +1,5 @@
+# cython: linetrace=True
+
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -221,10 +223,10 @@ cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
     pl : `~numpy.ndarray`
         Planck function evaluated at each wavelength
     """
-    cdef Py_ssize_t i, j, k, l=temperature.shape[0], m=temperature.shape[1]
-    cdef Py_ssize_t n=len(wavelengths)
-    planck = np.zeros((n, l, m), dtype=DTYPE)
+    cdef int i, j, k, l=temperature.shape[0], m=temperature.shape[1], n=len(wavelengths)
+    cdef np.ndarray[DTYPE_t, ndim=3] planck = np.zeros((n, l, m), dtype=DTYPE)
     cdef double [:, :, :] planck_view = planck
+
 
     for i in prange(n, nogil=True):
         for j in range(l):
@@ -429,9 +431,11 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef float T_eq, rp_rs
     cdef DTYPE_t integral
     cdef int k, phi_min, phi_max, n_xi = len(xi)
-    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
-    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
-    fluxes = np.zeros(n_xi, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] fluxes = np.zeros(n_xi, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] theta2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] phi2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
     cdef double [::1] fluxes_view = fluxes
@@ -445,22 +449,22 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
 
     rp_rs = rp_a * a_rs
-    ones = np.ones_like(T)
+    cdef np.ndarray[DTYPE_t, ndim=2] ones = np.ones((n_theta, n_phi), dtype=DTYPE)
     int_bb = integrate_planck(filt_wavelength,
                               filt_transmittance, T,
                               T_s * ones,
                               theta, phi, rp_rs, n_phi,
-                              False)
+                              return_interp=False)
     cdef double [:, :] int_bb_view = int_bb
     cdef double [:] xi_view = xi
 
     for k in range(n_xi):
         phi_min = argmin(phi, -xi_view[k] - pi/2)
         phi_max = argmin(phi, -xi_view[k] + pi/2)
-        integrand_map = (int_bb_view[phi_min:phi_max] *
-                         sinsq_2d(theta2d[phi_min:phi_max]) *
-                         cos_2d(phi2d[phi_min:phi_max] + xi_view[k]))
-        integral = trapz2d(integrand_map, phi[phi_min:phi_max], theta)
+        integral = trapz2d((int_bb_view[phi_min:phi_max] *
+                           sinsq_2d(theta2d[phi_min:phi_max]) *
+                           cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
+                           phi[phi_min:phi_max], theta)
         fluxes_view[k] = integral
     return fluxes
 
@@ -498,7 +502,7 @@ cdef sinsq_2d(double [:, :] z):
     The square of the sine of a 2d array
     """
     cdef int m = z.shape[0], n = z.shape[1]
-    s = np.zeros((m, n), dtype=DTYPE)
+    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, ::1] s_view = s
 
     for i in range(m):
@@ -514,7 +518,7 @@ cdef cos_2d(double [:, :] z):
     The cosine of a 2d array
     """
     cdef int m = z.shape[0], n = z.shape[1]
-    s = np.zeros((m, n), dtype=DTYPE)
+    cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, ::1] s_view = s
 
     for i in range(m):
