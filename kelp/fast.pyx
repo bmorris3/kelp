@@ -262,9 +262,9 @@ cdef trapz3d(double [:, :, :] y_3d, double [:] x):
     s = np.zeros((m, n), dtype=DTYPE)
     cdef double [:, :] s_view = s
 
-    for k in range(m):
-        for j in range(n):
-            for i in range(1, l):
+    for i in prange(1, l, nogil=True):
+        for k in range(m):
+            for j in range(n):
                 s_view[k, j] = (s_view[k, j] + (x[i] - x[i-1]) *
                                 (y_3d[i, k, j] + y_3d[i-1, k, j]) / 2)
 
@@ -356,16 +356,16 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
 
     cdef int i, j, k
     cdef Py_ssize_t l = len(filt_wavelength), m = len(theta_grid), n = len(phi_grid)
-    bb = np.zeros((l, m, n), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=3] bb = np.zeros((l, m, n), dtype=DTYPE)
 
-    bb_num = blackbody2d(filt_wavelength, temperature)
-    bb_den = blackbody2d(filt_wavelength, T_s)
+    cdef np.ndarray[DTYPE_t, ndim=3] bb_num = blackbody2d(filt_wavelength, temperature)
+    cdef np.ndarray[DTYPE_t, ndim=3] bb_den = blackbody2d(filt_wavelength, T_s)
 
     cdef double [:, :, ::1] bb_view = bb
     cdef double [:, :, ::1] bb_num_view = bb_num
     cdef double [:, :, ::1] bb_den_view = bb_den
 
-    for k in range(l):
+    for k in prange(l, nogil=True):
         for i in range(m):
             for j in range(n):
                 bb_view[k, i, j] = (bb_num_view[k, i, j] /

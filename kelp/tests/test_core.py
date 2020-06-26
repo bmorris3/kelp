@@ -21,7 +21,7 @@ def test_cython_temperature_map():
 
 @pytest.mark.parametrize("n_theta,n_phi,rtol",
                          ((10, 150, 1e-2),
-                          (20, 500, 1e-3),
+                          (20, 500, 1.5e-3),
                           (50, 5000, 2e-4)))
 def test_cython_phase_curve(n_theta, n_phi, rtol):
     filt = Filter.from_name('IRAC 1')
