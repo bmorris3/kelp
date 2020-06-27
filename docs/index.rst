@@ -10,4 +10,5 @@ package written in Python. The source code is available on
 
   kelp/installation.rst
   kelp/gettingstarted.rst
+  kelp/optimization.rst
   kelp/index.rst
