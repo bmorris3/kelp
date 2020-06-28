@@ -2,7 +2,8 @@
 Optimization
 ************
 
-First let's import the necessary packages:
+First let's import the necessary packages, which include ``scipy`` and
+``emcee`` for non-linear optimization and MCMC respectively.
 
 .. code-block:: python
 
@@ -20,8 +21,8 @@ First let's import the necessary packages:
     np.random.seed(42)
 
 Next let's set up the properties of the `~kelp.Planet`, which we'll assume is
-like HD 189733 b, the `~kelp.Filter` which we'll assume is the Spitzer/IRAC
-Channel 1:
+like HD 189733 b, and the `~kelp.Filter` which we'll assume is the Spitzer/IRAC
+Channel 1 (3.6 micron):
 
 .. code-block:: python
 
@@ -29,21 +30,28 @@ Channel 1:
     filt = Filter.from_name("IRAC 1")
     filt.bin_down(10)  # this speeds up the integration
 
-    xi = np.linspace(-np.pi, np.pi, 50)
 
-    hotspot_offset = np.radians(40)
-    alpha = 0.6  # dimensionless fluid number
-    omega = 4.5  # dimensionless drag frequency
-    A_B = 0      # Bond albedo
-    lmax = 1     # \ell_{max}
-    C = [[0],    # C_{m \ell} terms
-         [0, 0.6, 0]]
-    obs_err = 1e-8
+We'll also set up the model parameters using the :math:`h_{m\ell}` basis:
+
+.. code-block:: python
+
+    hotspot_offset = np.radians(-40)  # Hotspot offset
+    alpha = 0.6          # dimensionless fluid number
+    omega = 4.5          # dimensionless drag frequency
+    A_B = 0              # Bond albedo
+    lmax = 1             # \ell_{max}
+    C = [[0],            # C_{m \ell} terms
+         [0, 0.15, 0]]
+    obs_err = 1e-4       # Observational white noise
 
 Now we'll initialize a noisy instance of the model to be our "truth" in
 this example, which we will recover with optimization techniques:
 
 .. code-block:: python
+
+    # `xi` is the time axis of the phase curve, going from -pi (transit) to
+    # 0 (eclipse) and back to pi (transit)
+    xi = np.linspace(-np.pi, np.pi, 50)
 
     # Compute the phase curve of the exoplanet:
     model = Model(hotspot_offset, alpha, omega,
@@ -74,22 +82,24 @@ this example, which we will recover with optimization techniques:
 
     xi = np.linspace(-np.pi, np.pi, 50)
 
-    hotspot_offset = np.radians(40)
+    hotspot_offset = np.radians(-40)
     alpha = 0.6
     omega = 4.5
     A_B = 0
     lmax = 1
     C = [[0],
-         [0, 0.6, 0]]
-    obs_err = 1e-8
+         [0, 0.15, 0]]
+    obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi).flux + obs_err * np.random.randn(xi.shape[0])
+    obs = model.phase_curve(xi).flux
+    obs += obs_err * np.random.randn(xi.shape[0])
 
     errkwargs = dict(color='k', fmt='.', ecolor='silver')
     plt.errorbar(xi / np.pi, obs, obs_err, **errkwargs)
     plt.xlabel('$\\xi/\\pi$')
     plt.ylabel('$\\rm F_p/F_s$')
+    plt.tight_layout()
     plt.show()
 
 The simulated observations ``obs`` have small scale, uncorrelated scatter
@@ -139,7 +149,7 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
         return -np.inf
 
 
-    initp = np.array([0.7, 0.6])
+    initp = np.array([-0.7, 0.1])
 
     bounds = [[0, 2], [0.1, 1]]
 
@@ -200,17 +210,18 @@ measure the uncertainty on the maximum-likelihood parameters:
 
     xi = np.linspace(-np.pi, np.pi, 50)
 
-    hotspot_offset = np.radians(40)
+    hotspot_offset = np.radians(-40)
     alpha = 0.6
     omega = 4.5
     A_B = 0
     lmax = 1
     C = [[0],
-         [0, 0.6, 0]]
-    obs_err = 1e-8
+         [0, 0.15, 0]]
+    obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi).flux + obs_err * np.random.randn(xi.shape[0])
+    obs = model.phase_curve(xi).flux
+    obs += obs_err * np.random.randn(xi.shape[0])
 
     def pc_model(p, x):
         """
@@ -254,9 +265,9 @@ measure the uncertainty on the maximum-likelihood parameters:
 
     from scipy.optimize import minimize
 
-    initp = np.array([0.7, 0.6])
+    initp = np.array([-0.7, 0.2])
 
-    bounds = [[0, 2], [0.1, 1]]
+    bounds = [[-2, 0], [0.0, 1]]
 
     soln = minimize(lambda *args: -lnprob(*args),
                     initp, args=(xi, obs, obs_err),
@@ -271,7 +282,6 @@ measure the uncertainty on the maximum-likelihood parameters:
 
     p0 = [soln.x + 0.1 * np.random.randn(ndim)
           for i in range(nwalkers)]
-
 
     sampler = EnsembleSampler(nwalkers, ndim, lnprob,
                               args=(xi, obs, obs_err))
@@ -290,10 +300,18 @@ measure the uncertainty on the maximum-likelihood parameters:
     plt.plot(xi/np.pi, pc_model(p_map, xi), color='r')
     plt.xlabel('$\\xi/\\pi$')
     plt.ylabel('$\\rm F_p/F_s$')
+    plt.tight_layout()
     plt.show()
 
 The blue lines on the corner plot represent the "true" (input) values which we
 used to construct the simulated observations. The recovered
 (:math:`\Delta \phi`, :math:`C_{11}`) parameters are consistent with their true
 values. The maximum likelihood parameters generate a model (red) that looks
-very consistent with the observations (black). Good job, team!
+very consistent with the observations (black).
+
+When doing this integration for non-demonstration purposes, you should tweak the
+number of walkers to be more like a factor of 5-10 greater than the number of
+dimensions, and the number of steps should be increased by a factor of at least
+a few.
+
+

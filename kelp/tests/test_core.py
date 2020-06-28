@@ -4,12 +4,20 @@ from ..registries import Planet, Filter
 import pytest
 
 
-def test_cython_temperature_map():
+@pytest.mark.parametrize("alpha,omega_drag",
+                         ((0.2, 1),
+                          (0.5, 1),
+                          (0.6, 1),
+                          (0.6, 5),
+                          (0.6, 20),
+                          (0.6, 100)))
+def test_cython_temperature_map(alpha, omega_drag):
     filt = Filter.from_name('IRAC 1')
     lmax = 1
     C_ml = [[0],
             [0, 1, 0]]
-    model = Model(0, 0.5, 20, 0, C_ml, lmax, 15, 1e-3, 5770, filt=filt)
+    model = Model(0, alpha, omega_drag, 0,
+                  C_ml, lmax, 15, 1e-3, 5770, filt=filt)
 
     n_phi = n_theta = 25
 
