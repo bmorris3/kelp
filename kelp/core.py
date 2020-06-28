@@ -362,6 +362,8 @@ class Model(object):
         fluxes : `~numpy.ndarray`
             System fluxes as a function of phase angle :math:`\xi`.
         """
+        rp_rs2 = (self.rp_a * self.a_rs)**2
+
         if quad:
             fluxes = np.zeros(len(xi))
 
@@ -376,7 +378,8 @@ class Model(object):
                 fluxes[i] = dblquad(integrand, 0, np.pi,
                                     lambda x: -xi[i] - np.pi / 2,
                                     lambda x: -xi[i] + np.pi / 2,
-                                    epsrel=100, args=(xi[i],))[0]
+                                    epsrel=100, args=(xi[i],)
+                                    )[0] * rp_rs2 / np.pi
 
         else:
             fluxes = phase_curve(xi, self.hotspot_offset,

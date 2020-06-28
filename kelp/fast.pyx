@@ -1,3 +1,7 @@
+"""
+# cython: linetrace=True
+"""
+
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -174,6 +178,8 @@ cdef float blackbody_lambda(float lam, float temperature) nogil:
     return (2 * h * c**2 / lam**5 /
             (exp(h * c / (lam * k_B * temperature)) - 1))
 
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def blackbody(double [:] wavelengths, float temperature):
@@ -225,7 +231,6 @@ cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
     cdef np.ndarray[DTYPE_t, ndim=3] planck = np.zeros((n, l, m), dtype=DTYPE)
     cdef double [:, :, :] planck_view = planck
 
-
     for i in prange(n, nogil=True):
         for j in range(l):
             for k in range(m):
@@ -255,17 +260,16 @@ cdef trapz3d(double [:, :, :] y_3d, double [:] x):
     """
     Pure cython version of trapezoid rule in ~more dimensions~
     """
-    cdef Py_ssize_t i, j, k, l = len(x), m = y_3d.shape[1], n = y_3d.shape[2]
+    cdef int i, j, k, l = len(x), m = y_3d.shape[1], n = y_3d.shape[2]
 
     s = np.zeros((m, n), dtype=DTYPE)
-    cdef double [:, :] s_view = s
+    cdef double [:, ::1] s_view = s
 
     for i in prange(1, l, nogil=True):
         for k in range(m):
             for j in range(n):
-                s_view[k, j] = (s_view[k, j] + (x[i] - x[i-1]) *
-                                (y_3d[i, k, j] + y_3d[i-1, k, j]) / 2)
-
+                s_view[k, j] += ((x[i] - x[i-1]) *
+                                 (y_3d[i, k, j] + y_3d[i-1, k, j]) / 2)
     return s
 
 @cython.boundscheck(False)
@@ -307,7 +311,7 @@ cdef int argmin(double [:] arr, float value):
 @cython.cdivision(True)
 cdef float bilinear_interpolate(double [:, :] im,
                                 double [:] x_grid, double [:] y_grid,
-                                float y, float x):
+                                float x, float y):
     """
     Bilinear interpolation over an image `im` which is computed on grid
     `x_grid` vs `y_grid`, evaluated at position (x, y).
@@ -358,24 +362,15 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
 
     cdef np.ndarray[DTYPE_t, ndim=3] bb_num = blackbody2d(filt_wavelength, temperature)
     cdef np.ndarray[DTYPE_t, ndim=3] bb_den = blackbody2d(filt_wavelength, T_s)
-
-    cdef double [:, :, ::1] bb_view = bb
-    cdef double [:, :, ::1] bb_num_view = bb_num
-    cdef double [:, :, ::1] bb_den_view = bb_den
-
-    for k in prange(l, nogil=True):
-        for i in range(m):
-            for j in range(n):
-                bb_view[k, i, j] = (bb_num_view[k, i, j] /
-                                    bb_den_view[k, i, j] *
-                                    filt_trans[k])
-
-    int_bb = trapz3d(bb, filt_wavelength).T
+    cdef np.ndarray[DTYPE_t, ndim=3] broadcast_trans = filt_trans[:, None, None] * np.ones((l, m, n), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_num = trapz3d(bb_num * broadcast_trans, filt_wavelength)
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_den = trapz3d(bb_den * broadcast_trans, filt_wavelength)
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb = int_bb_num / int_bb_den
 
     if return_interp:
         def interp(theta, phi, theta_grid=theta_grid, phi_grid=phi_grid,
-                   rp_rs=rp_rs, int_bb=int_bb):
-            return bilinear_interpolate(int_bb, phi_grid, theta_grid,
+                   int_bb=int_bb):
+            return bilinear_interpolate(int_bb, theta_grid, phi_grid,
                                         theta, phi)
         return int_bb, interp
     else:
@@ -436,6 +431,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef np.ndarray[DTYPE_t, ndim=2] phi2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
+
     cdef double [::1] fluxes_view = fluxes
 
     # Cython alternative to the pure python implementation:
@@ -452,7 +448,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                               filt_transmittance, T,
                               T_s * ones,
                               theta, phi, rp_rs, n_phi,
-                              return_interp=False)
+                              return_interp=False).T
     cdef double [:, :] int_bb_view = int_bb
     cdef double [:] xi_view = xi
 
@@ -463,7 +459,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                            sinsq_2d(theta2d[phi_min:phi_max]) *
                            cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
                            phi[phi_min:phi_max], theta)
-        fluxes_view[k] = integral
+        fluxes_view[k] = integral * rp_rs**2 / pi
     return fluxes
 
 @cython.boundscheck(False)
@@ -501,7 +497,7 @@ cdef sinsq_2d(double [:, :] z):
     """
     cdef int m = z.shape[0], n = z.shape[1]
     cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
-    cdef double [:, ::1] s_view = s
+    cdef double [:, :] s_view = s
 
     for i in range(m):
         for j in range(n):
@@ -517,7 +513,7 @@ cdef cos_2d(double [:, :] z):
     """
     cdef int m = z.shape[0], n = z.shape[1]
     cdef np.ndarray s = np.zeros((m, n), dtype=DTYPE)
-    cdef double [:, ::1] s_view = s
+    cdef double [:, :] s_view = s
 
     for i in range(m):
         for j in range(n):
