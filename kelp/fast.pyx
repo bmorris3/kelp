@@ -389,18 +389,21 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
     `integrate_planck`
     """
     cdef float T_eq, rp_rs
-    phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
-    theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] theta = np.linspace(0, pi, n_theta, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] theta2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] phi2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
 
     # Cython alternative to the pure python implementation:
-    h_ml_sum = h_ml_sum_cy(hotspot_offset, omega_drag,
-                           alpha, theta2d, phi2d, C_ml,
-                           lmax)
+    cdef np.ndarray[DTYPE_t, ndim=2] h_ml_sum = h_ml_sum_cy(hotspot_offset,
+                                                            omega_drag,
+                                                            alpha, theta2d,
+                                                            phi2d, C_ml, lmax)
     T_eq = f * T_s * a_rs**-0.5
 
-    T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
+    cdef np.ndarray[DTYPE_t, ndim=2] T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
 
     rp_rs = rp_a * a_rs
 
