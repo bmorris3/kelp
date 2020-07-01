@@ -77,12 +77,19 @@ except Exception:
     version = '{version}'
 """.lstrip()
 
+extra_args = ["-Xpreprocessor", '-fopenmp']
+import platform
+if platform.platform().startswith('Darwin-18'): 
+    extra_args = ['-Xpreprocessor', '-fopenmp']
+else: 
+    extra_args = ['-fopenmp']
+
 ext_modules = [
     Extension(
         "kelp.fast",
         ["kelp/fast.pyx"],
-        extra_compile_args=["-Xpreprocessor", '-fopenmp'],
-        extra_link_args=["-Xpreprocessor", '-fopenmp'],
+        extra_compile_args=extra_args,
+        extra_link_args=extra_args,
         include_dirs=[np.get_include()]
     )
 ]
