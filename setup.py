@@ -81,8 +81,8 @@ ext_modules = [
     Extension(
         "kelp.fast",
         ["kelp/fast.pyx"],
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
+        extra_compile_args=["-Xpreprocessor", '-fopenmp'],
+        extra_link_args=["-Xpreprocessor", '-fopenmp'],
         include_dirs=[np.get_include()]
     )
 ]
