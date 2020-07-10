@@ -333,7 +333,7 @@ class Model(object):
                 (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
 
     def phase_curve(self, xi, n_theta=20, n_phi=200, f=2**-0.5, cython=True,
-                    reflected=False, quad=False):
+                    reflected=False, quad=False, u_ld=[0.4216, 0.2013]):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
@@ -370,19 +370,27 @@ class Model(object):
             int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi,
                                                                  f, cython)
 
-            def integrand(phi, theta, xi):
+            # http://vizier.u-strasbg.fr/viz-bin/VizieR-3?-source=J/A%2bA/600/A30/tableab
+            def integrand(phi, theta, xi, u_ld=[0.5678, 0.1357]):
+                # # limb-darkening radial distance
+                # rsq_ld = ((sin(phi + xi) * cos(theta - np.pi/2))**2 +
+                #            sin(theta - np.pi/2)**2)
+                # mu = (1 - rsq_ld)**0.5
+                # u1, u2 = u_ld
+                # planet_ld_term = (1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2)
+                planet_ld_term = 1
                 return (interp_blackbody(theta, phi) * sin(theta)**2 *
-                        cos(phi + xi))
+                        cos(phi + xi) * planet_ld_term)
 
             for i in range(len(xi)):
                 fluxes[i] = dblquad(integrand, 0, np.pi,
                                     lambda x: -xi[i] - np.pi / 2,
                                     lambda x: -xi[i] + np.pi / 2,
-                                    epsrel=100, args=(xi[i],)
-                                    )[0] * rp_rs2 / np.pi
+                                    epsrel=100, args=(xi[i], u_ld)
+                                    )[0] * rp_rs2
 
         else:
-            fluxes = phase_curve(xi, self.hotspot_offset,
+            fluxes = phase_curve(xi.astype(np.float64), self.hotspot_offset,
                                  self.omega_drag,
                                  self.alpha, self.C_ml, self.lmax,
                                  self.T_s, self.a_rs, self.rp_a,

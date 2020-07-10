@@ -462,7 +462,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                            sinsq_2d(theta2d[phi_min:phi_max]) *
                            cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
                            phi[phi_min:phi_max], theta)
-        fluxes_view[k] = integral * rp_rs**2 / pi
+        fluxes_view[k] = integral * rp_rs**2
     return fluxes
 
 @cython.boundscheck(False)
