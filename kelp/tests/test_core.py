@@ -27,11 +27,11 @@ def test_cython_temperature_map(alpha, omega_drag):
     np.testing.assert_allclose(T0, T1, atol=1e-3)
 
 
-@pytest.mark.parametrize("n_theta,n_phi,rtol",
-                         ((10, 150, 5e-2),
-                          (20, 500, 3e-3),
-                          (50, 2000, 8e-4)))
-def test_cython_phase_curve(n_theta, n_phi, rtol):
+@pytest.mark.parametrize("n_theta,n_phi,atol",
+                         ((10, 150, 1e-3),
+                          (20, 500, 3e-4),
+                          (50, 2000, 5e-5)))
+def test_cython_phase_curve(n_theta, n_phi, atol):
     filt = Filter.from_name('IRAC 1')
     p = Planet.from_name('HD 189733')
 
@@ -45,4 +45,4 @@ def test_cython_phase_curve(n_theta, n_phi, rtol):
     pc0 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=True)
     pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False)
 
-    np.testing.assert_allclose(pc0.flux, pc1.flux, rtol=rtol)
+    np.testing.assert_allclose(pc0.flux, pc1.flux, atol=atol)

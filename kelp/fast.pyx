@@ -458,10 +458,13 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     for k in range(n_xi):
         phi_min = argmin(phi, -xi_view[k] - pi/2)
         phi_max = argmin(phi, -xi_view[k] + pi/2)
-        integral = trapz2d((int_bb_view[phi_min:phi_max] *
-                           sinsq_2d(theta2d[phi_min:phi_max]) *
-                           cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
+        # integral = trapz2d((int_bb_view[phi_min:phi_max] *
+        #                    sinsq_2d(theta2d[phi_min:phi_max]) *
+        #                    cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
+        #                    phi[phi_min:phi_max], theta)
+        integral = trapz2d(int_bb_view[phi_min:phi_max],
                            phi[phi_min:phi_max], theta)
+
         fluxes_view[k] = integral * rp_rs**2
     return fluxes
 
