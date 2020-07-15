@@ -9,6 +9,7 @@ package written in Python. The source code is available on
   :maxdepth: 2
 
   kelp/installation.rst
+  kelp/background.rst
   kelp/gettingstarted.rst
   kelp/optimization.rst
   kelp/index.rst
