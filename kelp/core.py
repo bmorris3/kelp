@@ -379,14 +379,15 @@ class Model(object):
                 # u1, u2 = u_ld
                 # planet_ld_term = (1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2)
                 planet_ld_term = 1
-                return (interp_blackbody(theta, phi) * planet_ld_term)
+                return (interp_blackbody(theta, phi) * sin(theta)**2 *
+                        cos(phi + xi))
 
             for i in range(len(xi)):
                 fluxes[i] = dblquad(integrand, 0, np.pi,
                                     lambda x: -xi[i] - np.pi / 2,
                                     lambda x: -xi[i] + np.pi / 2,
                                     epsrel=100, args=(xi[i], u_ld)
-                                    )[0] * rp_rs2
+                                    )[0] * rp_rs2 / np.pi
 
         else:
             fluxes = phase_curve(xi.astype(np.float64), self.hotspot_offset,
