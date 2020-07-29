@@ -378,7 +378,6 @@ class Model(object):
                 # mu = (1 - rsq_ld)**0.5
                 # u1, u2 = u_ld
                 # planet_ld_term = (1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2)
-                planet_ld_term = 1
                 return (interp_blackbody(theta, phi) * sin(theta)**2 *
                         cos(phi + xi))
 
