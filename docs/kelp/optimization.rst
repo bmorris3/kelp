@@ -183,7 +183,7 @@ measure the uncertainty on the maximum-likelihood parameters:
 
     # Plot the corner plot with the posteriors:
     corner(sampler.flatchain, truths=[hotspot_offset, C[1][1]],
-           labels=['$\Delta \phi$', '$C_{11}$']))
+           labels=['$\Delta \phi$', '$C_{11}$'])
     plt.show()
 
     # Extract the maximum a posteriori parameters, plot the corresponding model
