@@ -13,10 +13,6 @@ on:
     # branches: # only build on PRs against 'main' if you need to further limit when CI is run.
     #    - main
 
-strategy:
-  matrix:
-    compiler: [gcc, clang]
-
 jobs:
   # Github Actions supports ubuntu, windows, and macos virtual environments:
   # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners
@@ -27,6 +23,7 @@ jobs:
       CC: ${{ matrix.compiler }}
     strategy:
       matrix:
+        compiler: [gcc, clang]
         include:
           - name: Code style checks
             os: ubuntu-latest
