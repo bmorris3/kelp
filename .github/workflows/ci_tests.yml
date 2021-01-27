@@ -23,7 +23,7 @@ jobs:
       CC: ${{ matrix.compiler }}
     strategy:
       matrix:
-        compiler: [gcc, clang]
+        compiler: [gcc]
         include:
           - name: Code style checks
             os: ubuntu-latest
