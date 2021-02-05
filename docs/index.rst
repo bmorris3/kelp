@@ -1,3 +1,7 @@
+.. image:: _static/kelp.svg
+  :align: right
+  :width: 200
+
 kelp
 ====
 

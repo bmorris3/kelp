@@ -1,0 +1,11 @@
+@import url("bootstrap-astropy.css");
+
+div.topbar a.brand {
+  background: transparent url("kelp.png") no-repeat 8px 3px;
+  background-image: url("kelp.svg"), none;
+  background-size: 32px 32px;
+}
+
+#logotext1 {
+  color: #239926;
+}
