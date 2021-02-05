@@ -148,6 +148,11 @@ class Filter(object):
         """
         Bin down the filter bandpass wavelengths and transmittances (shortcut
         for faster integration over the bandpass).
+
+        Parameters
+        ----------
+        bins : int
+            Number of bins in the binned transmittance curve.
         """
         bs = binned_statistic(self.wavelength.value, self.transmittance,
                               bins=bins, statistic='median')
