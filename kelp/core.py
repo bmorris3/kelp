@@ -1,14 +1,13 @@
 from math import sin, cos
 
+import astropy.units as u
 import numpy as np
+from astropy.modeling.models import BlackBody
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from .registries import PhaseCurve
 from .fast import h_ml_sum_cy, integrated_blackbody, phase_curve
-
-from astropy.modeling.models import BlackBody
-import astropy.units as u
+from .registries import PhaseCurve
 
 __all__ = ['Model']
 
@@ -87,6 +86,7 @@ class Model(object):
     """
     Planetary system object for generating phase curves
     """
+
     def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
                  a_rs=None, rp_a=None, T_s=None, planet=None, filt=None):
         r"""
@@ -153,6 +153,11 @@ class Model(object):
         r"""
         Angle :math:`\mu = \cos(\theta)`
 
+        .. note::
+
+            It is assumed that ``theta`` is linearly spaced and always
+            increasing.
+
         Parameters
         ----------
         theta : `~numpy.ndarray`
@@ -187,6 +192,11 @@ class Model(object):
         r"""
         The :math:`h_{m\ell}` basis function.
 
+        .. note::
+
+            It is assumed that ``theta`` and ``phi`` are linearly spaced and
+            always increasing.
+
         Parameters
         ----------
         m : int
@@ -220,7 +230,7 @@ class Model(object):
         hml = prefactor * (a + b * c)
         return hml.T
 
-    def temperature_map(self, n_theta, n_phi, f=2**-0.5, cython=True):
+    def temperature_map(self, n_theta, n_phi, f=2 ** -0.5, cython=True):
         """
         Temperature map as a function of latitude (theta) and longitude (phi).
 
@@ -259,11 +269,11 @@ class Model(object):
 
         T_eq = f * self.T_s * np.sqrt(1 / self.a_rs)
 
-        T = T_eq * (1 - self.A_B)**0.25 * (1 + h_ml_sum)
+        T = T_eq * (1 - self.A_B) ** 0.25 * (1 + h_ml_sum)
 
         return T, theta, phi
 
-    def integrated_blackbody(self, n_theta, n_phi, f=2**-0.5, cython=True):
+    def integrated_blackbody(self, n_theta, n_phi, f=2 ** -0.5, cython=True):
         """
         Integral of the blackbody function convolved with a filter bandpass.
 
@@ -286,10 +296,12 @@ class Model(object):
         if cython:
             int_bb, func = integrated_blackbody(self.hotspot_offset,
                                                 self.omega_drag,
-                                                self.alpha, self.C_ml, self.lmax,
+                                                self.alpha, self.C_ml,
+                                                self.lmax,
                                                 self.T_s, self.a_rs, self.rp_a,
                                                 self.A_B, n_theta, n_phi,
-                                                self.filt.wavelength.to(u.m).value,
+                                                self.filt.wavelength.to(
+                                                    u.m).value,
                                                 self.filt.transmittance,
                                                 f=f)
             return int_bb, func
@@ -314,26 +326,8 @@ class Model(object):
                                             kx=1, ky=1)
             return int_bb, lambda theta, phi: interp_bb(theta, phi)[0][0]
 
-    def reflected(self, xi):
-        """
-        Symmetric reflection component of the phase curve.
-
-        Parameters
-        ----------
-        xi : array-like
-            Orbital phase angle
-
-        Returns
-        -------
-        f_R_sym : array-like
-            Reflected light (symmetric) component of the orbital phase curve.
-        """
-        A_g = 2 / 3 * self.A_B
-        return (self.rp_a ** 2 * A_g / np.pi * (np.sin(np.abs(xi)) +
-                (np.pi - np.abs(xi)) * np.cos(np.abs(xi))))
-
-    def phase_curve(self, xi, n_theta=20, n_phi=200, f=2**-0.5, cython=True,
-                    reflected=False, quad=False, u_ld=[0.4216, 0.2013]):
+    def phase_curve(self, xi, n_theta=20, n_phi=200, f=2 ** -0.5, cython=True,
+                    quad=False):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
@@ -348,8 +342,6 @@ class Model(object):
             Number of grid points in longitude
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
-        reflected : bool
-            Include reflected light component
         cython : bool
             Use Cython implementation of the `integrated_blackbody` function
             (deprecated). Default is True.
@@ -362,7 +354,7 @@ class Model(object):
         fluxes : `~numpy.ndarray`
             System fluxes as a function of phase angle :math:`\xi`.
         """
-        rp_rs2 = (self.rp_a * self.a_rs)**2
+        rp_rs2 = (self.rp_a * self.a_rs) ** 2
 
         if quad:
             fluxes = np.zeros(len(xi))
@@ -371,21 +363,21 @@ class Model(object):
                                                                  f, cython)
 
             # http://vizier.u-strasbg.fr/viz-bin/VizieR-3?-source=J/A%2bA/600/A30/tableab
-            def integrand(phi, theta, xi, u_ld=[0.5678, 0.1357]):
+            def integrand(phi, theta, xi):
                 # # limb-darkening radial distance
                 # rsq_ld = ((sin(phi + xi) * cos(theta - np.pi/2))**2 +
                 #            sin(theta - np.pi/2)**2)
                 # mu = (1 - rsq_ld)**0.5
                 # u1, u2 = u_ld
                 # planet_ld_term = (1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2)
-                return (interp_blackbody(theta, phi) * sin(theta)**2 *
+                return (interp_blackbody(theta, phi) * sin(theta) ** 2 *
                         cos(phi + xi))
 
             for i in range(len(xi)):
                 fluxes[i] = dblquad(integrand, 0, np.pi,
                                     lambda x: -xi[i] - np.pi / 2,
                                     lambda x: -xi[i] + np.pi / 2,
-                                    epsrel=100, args=(xi[i], u_ld)
+                                    epsrel=100, args=(xi[i],)
                                     )[0] * rp_rs2 / np.pi
 
         else:
@@ -397,8 +389,5 @@ class Model(object):
                                  self.filt.wavelength.to(u.m).value,
                                  self.filt.transmittance,
                                  f=f)
-
-        if reflected:
-            fluxes += self.reflected(xi)
 
         return PhaseCurve(xi, fluxes, channel=self.filt.name)
