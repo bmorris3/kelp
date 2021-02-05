@@ -113,8 +113,9 @@ class Filter(object):
 
         Parameters
         ----------
-        name : str (i.e.: "IRAC 1" or "IRAC 2")
-             Name of the filter
+        name : str
+             Name of the filter. Examples include "IRAC 1", "IRAC 2", "Kepler",
+             "TESS", and "CHEOPS".
         """
         return cls(np.array(cls._filters[name]['wavelength']) * u.um,
                    np.array(cls._filters[name]['transmittance']),
