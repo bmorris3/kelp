@@ -88,8 +88,8 @@ ext_modules = [
     Extension(
         "kelp.fast",
         ["kelp/fast.pyx"],
-        extra_compile_args=extra_args,
-        extra_link_args=extra_args,
+#        extra_compile_args=extra_args,
+#        extra_link_args=extra_args,
         include_dirs=[np.get_include()]
     )
 ]
