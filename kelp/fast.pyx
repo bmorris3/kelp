@@ -178,7 +178,8 @@ cdef float blackbody_lambda(float lam, float temperature) nogil:
     return (2 * h * c**2 / lam**5 /
             (exp(h * c / (lam * k_B * temperature)) - 1))
 
-
+def bl_test(float lam, float temperature):
+    return blackbody_lambda(lam, temperature)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -305,6 +306,9 @@ cdef int argmin(double [:] arr, float value):
             min_ind = i
 
     return min_ind
+
+def argmin_test(arr, value):
+    return argmin(arr, value)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -559,3 +563,6 @@ cdef float trapz2d(double [:, :] z, double [:] x, double [:] y):
     s3 = sum2d(z[1:m, 1:n])
 
     return 0.25 * dx * dy * (s1 + 2 * s2 + 4 * s3)
+
+def trapz2d_test(double [:,:] z , double [:] x, double [:] y):
+    return trapz2d(z, x, y)

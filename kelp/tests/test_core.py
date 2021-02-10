@@ -2,6 +2,33 @@ import numpy as np
 from ..core import Model
 from ..registries import Planet, Filter
 import pytest
+from ..fast import bl_test
+from ..fast import trapz
+from ..fast import argmin_test
+from astropy.modeling.models import BlackBody
+import astropy.units as u
+
+@pytest.mark.parametrize("y, x",
+                         ((np.array([0.1e-3,0.2e-3,0.3e-3,0.4e-3,0.5e-3]), np.array([0.0,1.0,2.0,3.0,4.0])),
+                          (np.array([0.1e-1,0.2e-1,0.3e-1,0.4e-1,0.5e-1]), np.array([0.0,1.0,2.0,3.0,4.0])),
+                          (np.array([1.0,2.0,3.0,4.0,5.0]), np.array([0.0,1.0,2.0,3.0,4.0]))))
+def test_trapz(y , x):
+    kelp_test = trapz(y, x)
+    check = np.trapz(y, x)
+
+    np.testing.assert_allclose(check, kelp_test, atol=1e-5)
+
+@pytest.mark.parametrize("wavelength, temp",
+                         ((0.5e-6, 1000),
+                          (0.5e-6, 500),
+                          (0.5e-5, 100),
+                          (0.5e-6, 10000),
+                          (0.5e-5, 1000)))
+def test_bl(wavelength, temp):
+    kelp_test = bl_test(wavelength, temp)
+    check = BlackBody(temp * u.K, scale=1 * (u.W / (u.m ** 2 * u.nm * u.sr)))(wavelength * u.m)
+
+    np.testing.assert_allclose(check.si.value, kelp_test, rtol=1e-4)
 
 
 @pytest.mark.parametrize("alpha,omega_drag",
@@ -46,3 +73,13 @@ def test_cython_phase_curve(n_theta, n_phi, atol):
     pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False)
 
     np.testing.assert_allclose(pc0.flux, pc1.flux, atol=atol)
+
+@pytest.mark.parametrize("y, x",
+                         ((np.linspace(0,10,10), 0.23),
+                          (np.linspace(0,10,100), 0.23),
+                          (np.linspace(0,10,1000), 0.23)))
+def test_argmin(y, x):
+    kelp_test = argmin_test(y, x)
+    check = (np.abs(y - x)).argmin()
+
+    np.testing.assert_array_equal(check, kelp_test)
