@@ -1,22 +1,27 @@
-import numpy as np
-from ..core import Model
-from ..registries import Planet, Filter
 import pytest
-from ..fast import bl_test
-from ..fast import trapz
-from ..fast import argmin_test
+
+import numpy as np
 from astropy.modeling.models import BlackBody
 import astropy.units as u
 
+from ..core import Model
+from ..registries import Planet, Filter
+from ..fast import bl_test, trapz, argmin_test
+
+
 @pytest.mark.parametrize("y, x",
-                         ((np.array([0.1e-3,0.2e-3,0.3e-3,0.4e-3,0.5e-3]), np.array([0.0,1.0,2.0,3.0,4.0])),
-                          (np.array([0.1e-1,0.2e-1,0.3e-1,0.4e-1,0.5e-1]), np.array([0.0,1.0,2.0,3.0,4.0])),
-                          (np.array([1.0,2.0,3.0,4.0,5.0]), np.array([0.0,1.0,2.0,3.0,4.0]))))
-def test_trapz(y , x):
+                         ((np.array([0.1e-3, 0.2e-3, 0.3e-3, 0.4e-3, 0.5e-3]),
+                           np.array([0.0, 1.0, 2.0, 3.0, 4.0])),
+                          (np.array([0.1e-1, 0.2e-1, 0.3e-1, 0.4e-1, 0.5e-1]),
+                           np.array([0.0, 1.0, 2.0, 3.0, 4.0])),
+                          (np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
+                           np.array([0.0, 1.0, 2.0, 3.0, 4.0]))))
+def test_trapz(y, x):
     kelp_test = trapz(y, x)
     check = np.trapz(y, x)
 
     np.testing.assert_allclose(check, kelp_test, atol=1e-5)
+
 
 @pytest.mark.parametrize("wavelength, temp",
                          ((0.5e-6, 1000),
@@ -74,12 +79,34 @@ def test_cython_phase_curve(n_theta, n_phi, atol):
 
     np.testing.assert_allclose(pc0.flux, pc1.flux, atol=atol)
 
+
 @pytest.mark.parametrize("y, x",
-                         ((np.linspace(0,10,10), 0.23),
-                          (np.linspace(0,10,100), 0.23),
-                          (np.linspace(0,10,1000), 0.23)))
+                         ((np.linspace(0, 10, 10), 0.23),
+                          (np.linspace(0, 10, 100), 0.23),
+                          (np.linspace(0, 10, 1000), 0.23)))
 def test_argmin(y, x):
     kelp_test = argmin_test(y, x)
     check = (np.abs(y - x)).argmin()
 
     np.testing.assert_array_equal(check, kelp_test)
+
+
+def test_integrated_temperatures():
+
+    # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
+    f = 0.68
+    C_ml = [[0],
+            [0, 0.18, 0]]
+    m = Model(
+        -0.8, 0.575, 4.5, 0, C_ml, 1,
+        planet=Planet.from_name('HD 189733'),
+        filt=Filter.from_name('IRAC 1')
+    )
+
+    dayside, nightside = m.integrated_temperatures(f=f)
+
+    # Check within 1 sigma of Knutson et al. 2012 dayside
+    assert abs(dayside - 1328) / 11 < 1
+
+    # Check within 1 sigma of Keating et al. 2019 nightside
+    assert abs(979 - nightside) / 58 < 1

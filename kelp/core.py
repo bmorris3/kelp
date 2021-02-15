@@ -245,6 +245,15 @@ class Model(object):
         cython : bool
             Use cython implementation of the hml basis. Default is True,
             yields a factor of ~two speedup.
+
+        Returns
+        -------
+        T : `~np.ndarray`
+            Temperature map evaluated precisely at each theta, phi
+        theta : `~np.ndarray`
+            Latitudes over which temperature map is computed
+        phi : `~np.ndarray`
+            Longitudes over which temperature map is computed
         """
         phase_offset = np.pi / 2
         phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
@@ -391,3 +400,54 @@ class Model(object):
                                  f=f)
 
         return PhaseCurve(xi, fluxes, channel=self.filt.name)
+
+    def integrated_temperatures(self, n_theta=100, n_phi=100, f=2 ** -0.5):
+        """
+        Temperature map as a function of latitude (theta) and longitude (phi).
+
+        Parameters
+        ----------
+        n_theta : int
+            Number of grid points in latitude
+        n_phi : int
+            Number of grid points in longitude
+        f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
+        cython : bool
+            Use cython implementation of the hml basis. Default is True,
+            yields a factor of ~two speedup.
+
+        Returns
+        -------
+        dayside : float
+            Integrated dayside temperature [K]
+        nightside : float
+            Integrated nightside temperature [K]
+        """
+        T, theta, phi = self.temperature_map(n_theta=n_theta, n_phi=n_phi, f=f)
+
+        theta2d, phi2d = np.meshgrid(theta, phi)
+
+        dayside_hemisphere = (phi < np.pi / 2) & (phi > -np.pi / 2)
+        nightside_hemisphere = (phi > np.pi / 2) & (phi < 3 / 2 * np.pi)
+
+        integrand_dayside = np.max(
+            [np.sin(theta2d) ** 2 * np.cos(phi2d),
+             np.zeros_like(theta2d)],
+            axis=0
+        ).T
+        integrand_nightside = np.max(
+            [np.sin(theta2d) ** 2 * np.cos(phi2d + np.pi),
+             np.zeros_like(theta2d)], axis=0
+        ).T
+
+        dayside_integrated_temperature = np.average(
+            T[:, dayside_hemisphere],
+            weights=integrand_dayside[:, dayside_hemisphere]
+        )
+        nightside_integrated_temperature = np.average(
+            T[:, nightside_hemisphere],
+            weights=integrand_nightside[:, nightside_hemisphere]
+        )
+
+        return dayside_integrated_temperature, nightside_integrated_temperature
