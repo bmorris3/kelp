@@ -2,6 +2,9 @@
 Optimization
 ************
 
+scipy and emcee
+---------------
+
 First let's import the necessary packages, which include ``scipy`` and
 ``emcee`` for non-linear optimization and MCMC respectively.
 
@@ -290,7 +293,7 @@ measure the uncertainty on the maximum-likelihood parameters:
                               args=(xi, obs, obs_err))
     p1 = sampler.run_mcmc(p0, 100)
     sampler.reset()
-    sampler.run_mcmc(p1, 500, progress=True)
+    sampler.run_mcmc(p1, 100, progress=True)
 
     corner(sampler.flatchain, truths=[hotspot_offset, C[1][1], 2**-0.5],
            labels=['$\Delta \phi$', '$C_{11}$', '$f$'])
@@ -317,4 +320,95 @@ number of walkers to be more like a factor of 5-10 greater than the number of
 dimensions, and the number of steps should be increased by a factor of at least
 a few.
 
+PyMC3
+-----
 
+The :math:`h_{m\ell}` basis has also been implemented within kelp using theano
+for compatibility with PyMC3. Here's a simple example that shows inference with
+the theano module:
+
+.. code-block:: python
+
+    import multiprocessing as mp
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import astropy.units as u
+
+    import pymc3 as pm
+    from corner import corner
+
+    floatX = 'float32'
+
+    from kelp import theano, Model, Filter, Planet
+
+    np.random.seed(42)
+
+    planet = Planet.from_name('HD 189733')
+    filt = Filter.from_name("IRAC 1")
+    filt.bin_down(5)
+
+    # Set orbital phase axis:
+    xi = np.linspace(-np.pi, np.pi, 100)
+
+    hotspot_offset = np.radians(-40)
+    alpha = 0.6
+    omega = 4.5
+    true_f = 2 ** -0.5
+    A_B = 0
+    lmax = 1
+    true_C_11 = 0.15
+    C = [[0],
+         [0, true_C_11, 0]]
+    obs_err = 5e-5
+    model = Model(hotspot_offset, alpha, omega,
+                  A_B, C, lmax, planet=planet, filt=filt)
+    obs = model.phase_curve(xi, f=true_f).flux
+    obs += obs_err * np.random.randn(xi.shape[0])
+
+
+    # Set planet parameters:
+    lmax = 1
+    T_s = planet.T_s
+    a_rs = planet.a
+    rp_a = planet.rp_a
+
+    # Set resolution of grid points on sphere:
+    n_phi = 100
+    n_theta = 10
+    phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=floatX)
+    theta = np.linspace(0, np.pi, n_theta, dtype=floatX)
+    theta2d, phi2d = np.meshgrid(theta, phi)
+
+    with pm.Model() as hml_model:
+        delta_phi = pm.Uniform("delta_phi", lower=np.radians(-90), upper=np.radians(90), testval=np.radians(-40))
+        C_11 = pm.Uniform("C_11", lower=0.01, upper=0.3, testval=0.15)
+        f = pm.Normal("f", mu=2**-0.5, sigma=0.1)
+
+        thermal_phase_curve, temperature_map, ps = theano.phase_curve(
+            xi.astype(floatX), delta_phi,
+            omega, alpha, C_11, lmax, T_s, a_rs, rp_a, A_B,
+            theta2d.astype(floatX), phi2d.astype(floatX),
+            filt.wavelength.to(u.m).value.astype(floatX),
+            filt.transmittance.astype(floatX), true_f
+        )
+
+        pm.Normal("obs", mu=thermal_phase_curve, observed=obs, sigma=obs_err)
+
+        trace = pm.sample(
+            draws=1000, tune=1000,
+            compute_convergence_checks=False,
+            mp_ctx=mp.get_context('fork')
+        )
+
+    truths = {
+        "delta_phi": hotspot_offset,
+        "C_11": true_C_11,
+        "f": true_f
+    }
+
+    df = pm.trace_to_dataframe(trace)[truths.keys()]
+    corner(
+        df,
+        truths=[truths[k] for k in truths.keys()]
+    )
+    plt.show()

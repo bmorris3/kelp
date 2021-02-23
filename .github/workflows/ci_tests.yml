@@ -37,16 +37,6 @@ jobs:
             toxenv: py38-test-alldeps-cov
             toxposargs: --remote-data
 
-          - name: OS X - Python 3.8 with all optional dependencies
-            os: macos-latest
-            python: 3.8
-            toxenv: py38-test-alldeps
-
-          - name: Windows - Python 3.8 with all optional dependencies
-            os: windows-latest
-            python: 3.8
-            toxenv: py38-test-alldeps
-
           - name: Python 3.9 with latest dev versions of key dependencies
             os: ubuntu-latest
             python: 3.9
@@ -66,6 +56,18 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Fix Conda permissions on macOS
+      run: |
+        sudo chown -R $UID $HOME/.conda
+      if: matrix.os == 'macos-latest'
+    - name: Install dependencies
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda env update --file environment.yml --name base
     - name: Install base dependencies
       run: |
         python -m pip install --upgrade pip

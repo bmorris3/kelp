@@ -322,15 +322,10 @@ class Model(object):
                 return lambda theta, phi: np.inf
 
             bb_t = BlackBody(temperature=T * u.K)
-            bb_ts = BlackBody(temperature=self.T_s * u.K)
-
-            bb_ratio = (bb_t(self.filt.wavelength[:, None, None]) /
-                        bb_ts(self.filt.wavelength[:, None, None]))
-
-            int_bb = np.trapz(bb_ratio *
+            int_bb = np.trapz(bb_t(self.filt.wavelength[:, None, None]) *
                               self.filt.transmittance[:, None, None],
-                              self.filt.wavelength.to(u.m).value, axis=0
-                              ).value
+                              self.filt.wavelength, axis=0
+                              ).si.value
             interp_bb = RectBivariateSpline(theta_grid, phi_grid, int_bb,
                                             kx=1, ky=1)
             return int_bb, lambda theta, phi: interp_bb(theta, phi)[0][0]
@@ -382,12 +377,17 @@ class Model(object):
                 return (interp_blackbody(theta, phi) * sin(theta) ** 2 *
                         cos(phi + xi))
 
+            bb_ts = BlackBody(temperature=self.T_s * u.K)
+            planck_star = np.trapz(self.filt.transmittance *
+                                   bb_ts(self.filt.wavelength),
+                                   self.filt.wavelength).si.value
+
             for i in range(len(xi)):
                 fluxes[i] = dblquad(integrand, 0, np.pi,
                                     lambda x: -xi[i] - np.pi / 2,
                                     lambda x: -xi[i] + np.pi / 2,
                                     epsrel=100, args=(xi[i],)
-                                    )[0] * rp_rs2 / np.pi
+                                    )[0] * rp_rs2 / np.pi / planck_star
 
         else:
             fluxes = phase_curve(xi.astype(np.float64), self.hotspot_offset,
