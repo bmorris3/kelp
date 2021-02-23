@@ -38,6 +38,7 @@ We'll also set up the model parameters using the :math:`h_{m\ell}` basis:
     hotspot_offset = np.radians(-40)  # Hotspot offset
     alpha = 0.6          # dimensionless fluid number
     omega = 4.5          # dimensionless drag frequency
+    f = 2**-0.5          # greenhouse parameter
     A_B = 0              # Bond albedo
     lmax = 1             # \ell_{max}
     C = [[0],            # C_{m \ell} terms
@@ -56,7 +57,7 @@ this example, which we will recover with optimization techniques:
     # Compute the phase curve of the exoplanet:
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi).flux
+    obs = model.phase_curve(xi, f=f).flux
 
     # Add random noise to the light curve:
     obs += obs_err * np.random.randn(xi.shape[0])
@@ -85,6 +86,7 @@ this example, which we will recover with optimization techniques:
     hotspot_offset = np.radians(-40)
     alpha = 0.6
     omega = 4.5
+    f = 2**-0.5
     A_B = 0
     lmax = 1
     C = [[0],
@@ -92,7 +94,7 @@ this example, which we will recover with optimization techniques:
     obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi).flux
+    obs = model.phase_curve(xi, f=f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
     errkwargs = dict(color='k', fmt='.', ecolor='silver')
@@ -113,19 +115,19 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
         """
         Phase curve model with two free parameters
         """
-        offset, c_11 = p
+        offset, c_11, f = p
         C = [[0],
              [0, c_11, 0]]
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x).flux
+        return model.phase_curve(x, f=f).flux
 
     def lnprior(p):
         """
         Log-prior: sets reasonable bounds on the fitting parameters
         """
-        offset, c_11 = p
+        offset, c_11, f = p
 
         if (offset > np.pi or offset < -np.pi or c_11 > 1 or c_11 < 0):
             return -np.inf
@@ -165,7 +167,7 @@ measure the uncertainty on the maximum-likelihood parameters:
 
 .. code-block:: python
 
-    ndim = 2
+    ndim = 3
     nwalkers = 2 * ndim  # in real life, you should scale this factor up
 
     # Generate initial positions for the walkers
@@ -179,11 +181,11 @@ measure the uncertainty on the maximum-likelihood parameters:
                                   pool=pool)
         p1 = sampler.run_mcmc(p0, 100)
         sampler.reset()
-        sampler.run_mcmc(p1, 500)
+        sampler.run_mcmc(p1, 500, progress=True)
 
     # Plot the corner plot with the posteriors:
-    corner(sampler.flatchain, truths=[hotspot_offset, C[1][1]],
-           labels=['$\Delta \phi$', '$C_{11}$'])
+    corner(sampler.flatchain, truths=[hotspot_offset, C[1][1], 2**-0.5],
+           labels=['$\Delta \phi$', '$C_{11}$', '$f$'])
     plt.show()
 
     # Extract the maximum a posteriori parameters, plot the corresponding model
@@ -213,6 +215,7 @@ measure the uncertainty on the maximum-likelihood parameters:
     hotspot_offset = np.radians(-40)
     alpha = 0.6
     omega = 4.5
+    f = 2**-0.5
     A_B = 0
     lmax = 1
     C = [[0],
@@ -220,26 +223,26 @@ measure the uncertainty on the maximum-likelihood parameters:
     obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi).flux
+    obs = model.phase_curve(xi, f=f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
     def pc_model(p, x):
         """
         Phase curve model with two free parameters
         """
-        offset, c_11 = p
+        offset, c_11, f = p
         C = [[0],
              [0, c_11, 0]]
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x).flux
+        return model.phase_curve(x, f=f).flux
 
     def lnprior(p):
         """
         Log-prior: sets reasonable bounds on the fitting parameters
         """
-        offset, c_11 = p
+        offset, c_11, f = p
 
         if (offset > np.pi or offset < -np.pi or c_11 > 1 or c_11 < 0):
             return -np.inf
@@ -265,9 +268,9 @@ measure the uncertainty on the maximum-likelihood parameters:
 
     from scipy.optimize import minimize
 
-    initp = np.array([-0.7, 0.2])
+    initp = np.array([-0.7, 0.2, 2**-0.5])
 
-    bounds = [[-2, 0], [0.0, 1]]
+    bounds = [[-2, 0], [0.0, 1], [0.5, 0.85]]
 
     soln = minimize(lambda *args: -lnprob(*args),
                     initp, args=(xi, obs, obs_err),
@@ -277,7 +280,7 @@ measure the uncertainty on the maximum-likelihood parameters:
     from multiprocessing import Pool
     from corner import corner
 
-    ndim = 2
+    ndim = 3
     nwalkers = 2 * ndim
 
     p0 = [soln.x + 0.1 * np.random.randn(ndim)
@@ -287,10 +290,10 @@ measure the uncertainty on the maximum-likelihood parameters:
                               args=(xi, obs, obs_err))
     p1 = sampler.run_mcmc(p0, 100)
     sampler.reset()
-    sampler.run_mcmc(p1, 500)
+    sampler.run_mcmc(p1, 500, progress=True)
 
-    corner(sampler.flatchain, truths=[hotspot_offset, C[1][1]],
-           labels=['$\Delta \phi$', '$C_{11}$'])
+    corner(sampler.flatchain, truths=[hotspot_offset, C[1][1], 2**-0.5],
+           labels=['$\Delta \phi$', '$C_{11}$', '$f$'])
     plt.show()
 
     p_map = sampler.flatchain[np.argmax(sampler.flatlnprobability)]
