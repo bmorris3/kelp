@@ -6,21 +6,7 @@ import astropy.units as u
 
 from ..core import Model
 from ..registries import Planet, Filter
-from ..fast import bl_test, trapz, argmin_test
-
-
-@pytest.mark.parametrize("y, x",
-                         ((np.array([0.1e-3, 0.2e-3, 0.3e-3, 0.4e-3, 0.5e-3]),
-                           np.array([0.0, 1.0, 2.0, 3.0, 4.0])),
-                          (np.array([0.1e-1, 0.2e-1, 0.3e-1, 0.4e-1, 0.5e-1]),
-                           np.array([0.0, 1.0, 2.0, 3.0, 4.0])),
-                          (np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-                           np.array([0.0, 1.0, 2.0, 3.0, 4.0]))))
-def test_trapz(y, x):
-    kelp_test = trapz(y, x)
-    check = np.trapz(y, x)
-
-    np.testing.assert_allclose(check, kelp_test, atol=1e-5)
+from ..fast import bl_test, argmin_test
 
 
 @pytest.mark.parametrize("wavelength, temp",
@@ -74,8 +60,8 @@ def test_cython_phase_curve(n_theta, n_phi, atol):
     model = Model(0, 0.5, 20, 0, C_ml, lmax, planet=p, filt=filt)
 
     xi = np.linspace(-np.pi, np.pi, 50)
-    pc0 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=True)
-    pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False)
+    pc0 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=True, cython=False)
+    pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False, cython=False)
 
     np.testing.assert_allclose(pc0.flux, pc1.flux, atol=atol)
 
@@ -95,6 +81,7 @@ def test_integrated_temperatures():
 
     # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
     f = 0.68
+
     C_ml = [[0],
             [0, 0.18, 0]]
     m = Model(
