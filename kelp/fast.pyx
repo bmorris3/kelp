@@ -367,8 +367,9 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
     cdef np.ndarray[DTYPE_t, ndim=3] bb_num = blackbody2d(filt_wavelength, temperature)
     cdef np.ndarray[DTYPE_t, ndim=3] bb_den = blackbody2d(filt_wavelength, T_s)
     cdef np.ndarray[DTYPE_t, ndim=3] broadcast_trans = filt_trans[:, None, None] * np.ones((l, m, n), dtype=DTYPE)
-    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_num = trapz3d(bb_num * broadcast_trans, filt_wavelength)
-    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_den = trapz3d(bb_den * broadcast_trans, filt_wavelength)
+    cdef np.ndarray[DTYPE_t, ndim=3] broadcast_wave = filt_wavelength[:, None, None] * np.ones((l, m, n), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_num = trapz3d(bb_num * broadcast_trans * broadcast_wave, filt_wavelength)
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_den = trapz3d(bb_den * broadcast_trans * broadcast_wave, filt_wavelength)
     cdef np.ndarray[DTYPE_t, ndim=2] int_bb = int_bb_num / int_bb_den
 
     if return_interp:
