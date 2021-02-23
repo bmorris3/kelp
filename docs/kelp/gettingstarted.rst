@@ -66,7 +66,9 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
     T, theta, phi = model.temperature_map(n_theta, n_phi, f=2**-0.5)
 
     # Plot the temperature map
-    cax = plt.pcolormesh(phi / np.pi, theta / np.pi, T)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='mollweide')
+    cax = ax.pcolormesh(phi, theta - np.pi/2, T)
     plt.colorbar(cax, label='T [K]')
     plt.show()
 
