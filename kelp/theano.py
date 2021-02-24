@@ -109,7 +109,7 @@ def h_ml(omega_drag, alpha, theta, phi, C_11, m=one, l=one):
                  (tt.pow(omega_drag, two) *
                   tt.pow(alpha, two * two) +
                   tt.pow(m, two)) *
-                  tt.exp(-tt.pow(tilda_mu(theta, alpha), two) * half))
+                 tt.exp(-tt.pow(tilda_mu(theta, alpha), two) * half))
 
     result = prefactor * (mu(theta) * m * H(l, theta, alpha) * tt.cos(m * phi) +
                           alpha * omega_drag * (tilda_mu(theta, alpha) *

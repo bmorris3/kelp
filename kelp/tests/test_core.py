@@ -8,6 +8,7 @@ from ..core import Model
 from ..registries import Planet, Filter
 from ..fast import bl_test, argmin_test
 
+
 @pytest.mark.parametrize("wavelength, temp",
                          ((0.5e-6, 1000),
                           (0.5e-6, 500),

@@ -9,7 +9,6 @@ from ..theano import phase_curve
 
 
 def test_cython_vs_theano():
-    import pymc3 as pm
     # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
     f = 0.68
     planet = Planet.from_name('HD 189733')
@@ -33,7 +32,7 @@ def test_cython_vs_theano():
 
     cython_phase_curve = m.phase_curve(xi, f=f).flux
 
-    with pm.Model() as pymc_model:
+    with pm.Model():
         thermal_phase_curve, T = phase_curve(
             xi, -0.8, 4.5, 0.575, 0.18, 1, planet.T_s, planet.a, planet.rp_a, 0,
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f

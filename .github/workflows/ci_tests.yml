@@ -60,10 +60,6 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
-    - name: Fix Conda permissions on macOS
-      run: |
-        sudo chown -R $UID $HOME/.conda
-      if: matrix.os == 'macos-latest'
     - name: Install dependencies
       run: |
         source $CONDA/etc/profile.d/conda.sh
