@@ -388,6 +388,7 @@ class Model(object):
                                     lambda x: -xi[i] + np.pi / 2,
                                     epsrel=100, args=(xi[i],)
                                     )[0] * rp_rs2 / np.pi / planck_star
+
         else:
             fluxes = phase_curve(xi.astype(np.float64), self.hotspot_offset,
                                  self.omega_drag,
