@@ -9,7 +9,7 @@ from cython.parallel import prange
 
 from libc.math cimport sin, cos, exp, pi
 
-__all__ = ["h_ml_sum_cy", "blackbody", "integrate_planck",
+__all__ = ["h_ml_sum_cy", "integrate_planck",
            "integrated_blackbody"]
 
 DTYPE = np.float64
@@ -183,7 +183,7 @@ def bl_test(float lam, float temperature):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def blackbody(double [:] wavelengths, float temperature):
+cdef blackbody(double [:] wavelengths, float temperature):
     """
     Planck function evaluated for a vector of wavelengths in units of meters
     and temperature in units of Kelvin
@@ -243,7 +243,7 @@ cdef blackbody2d(double [:] wavelengths, double [:, :] temperature):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def trapz(double [:] y, double [:] x):
+cdef float trapz(double [:] y, double [:] x):
     """
     Pure cython version of trapezoid rule
     """
@@ -363,13 +363,10 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
     cdef int i, j, k
     cdef Py_ssize_t l = len(filt_wavelength), m = len(theta_grid), n = len(phi_grid)
     cdef np.ndarray[DTYPE_t, ndim=3] bb = np.zeros((l, m, n), dtype=DTYPE)
-
     cdef np.ndarray[DTYPE_t, ndim=3] bb_num = blackbody2d(filt_wavelength, temperature)
-    cdef np.ndarray[DTYPE_t, ndim=3] bb_den = blackbody2d(filt_wavelength, T_s)
     cdef np.ndarray[DTYPE_t, ndim=3] broadcast_trans = filt_trans[:, None, None] * np.ones((l, m, n), dtype=DTYPE)
     cdef np.ndarray[DTYPE_t, ndim=2] int_bb_num = trapz3d(bb_num * broadcast_trans, filt_wavelength)
-    cdef np.ndarray[DTYPE_t, ndim=2] int_bb_den = trapz3d(bb_den * broadcast_trans, filt_wavelength)
-    cdef np.ndarray[DTYPE_t, ndim=2] int_bb = int_bb_num / int_bb_den
+    cdef np.ndarray[DTYPE_t, ndim=2] int_bb = int_bb_num
 
     if return_interp:
         def interp(theta, phi, theta_grid=theta_grid, phi_grid=phi_grid,
@@ -459,6 +456,10 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef double [:, :] int_bb_view = int_bb
     cdef double [:] xi_view = xi
 
+    cdef DTYPE_t planck_star = trapz(filt_transmittance *
+                                     blackbody(filt_wavelength, T_s),
+                                     filt_wavelength)
+
     for k in range(n_xi):
         phi_min = argmin(phi, -xi_view[k] - pi/2)
         phi_max = argmin(phi, -xi_view[k] + pi/2)
@@ -466,10 +467,8 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                            sinsq_2d(theta2d[phi_min:phi_max]) *
                            cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
                            phi[phi_min:phi_max], theta)
-        # integral = trapz2d(int_bb_view[phi_min:phi_max],
-        #                    phi[phi_min:phi_max], theta)
 
-        fluxes_view[k] = integral * rp_rs**2 / pi
+        fluxes_view[k] = integral * rp_rs**2 / pi / planck_star
     return fluxes
 
 @cython.boundscheck(False)

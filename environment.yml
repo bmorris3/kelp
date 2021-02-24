@@ -1,0 +1,9 @@
+name: kelp
+channels:
+  - conda-forge
+  - anaconda
+dependencies:
+  - pymc3
+  - llvm
+  - clang-11
+  - exoplanet
