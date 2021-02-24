@@ -1,0 +1,76 @@
+name: Python Package using Conda
+
+on:
+  push:
+    branches:
+      - master  # GitHub now defaults to 'main' as the name of the primary branch. Change this as needed.
+  pull_request:
+     branches: # only build on PRs against 'main' if you need to further limit when CI is run.
+      - master
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: Code style checks
+            os: ubuntu-latest
+            python: 3.x
+            toxenv: codestyle
+
+          - name: Python 3.7 with minimal dependencies
+            os: ubuntu-latest
+            python: 3.7
+            toxenv: py37-test
+
+          - name: Python 3.8 with all optional dependencies, coverage checking and remote data
+            os: ubuntu-latest
+            python: 3.8
+            toxenv: py38-test-alldeps-cov
+            toxposargs: --remote-data
+
+          - name: OS X - Python 3.8 with all optional dependencies
+            os: macos-latest
+            python: 3.8
+            toxenv: py38-test-alldeps
+
+          - name: Windows - Python 3.8 with all optional dependencies
+            os: windows-latest
+            python: 3.8
+            toxenv: py38-test-alldeps
+
+          - name: Python 3.9 with latest dev versions of key dependencies
+            os: ubuntu-latest
+            python: 3.9
+            toxenv: py39-test-devdeps
+
+          - name: Test building of Sphinx docs
+            os: ubuntu-latest
+            python: 3.x
+            toxenv: build_docs
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        conda env update --file environment.yml --name base
+    - name: Lint with flake8
+      run: |
+        conda install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        conda install pytest
+        pytest
