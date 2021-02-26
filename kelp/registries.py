@@ -29,6 +29,38 @@ class Planet(object):
     def __init__(self, per=None, t0=None, inc=None, rp=None, ecc=None, w=None,
                  a=None, u=None, fp=None, t_secondary=None, T_s=None, rp_a=None,
                  limb_dark='quadratic', name=None):
+        """
+        Parameters
+        ----------
+        per : float
+            Orbital period [days]
+        t0 : float
+            Mid-transit time
+        inc : float
+            Orbital inclination [deg]
+        rp : float
+            Ratio of planet to star radius
+        ecc : float
+            Eccentricity
+        w : float
+            Argument of periastron [deg]
+        a : float
+            Semimajor axis normalized by the stellar radius
+        u : list
+            (i.e.) Quadratic limb-darkening parameters
+        fp : float
+            Planetary flux out of eclipse
+        t_secondary : float
+            Time of secondary eclipse
+        T_s : float
+            Temperature of the host star [K]
+        rp_a : float
+            Radius of the planet over the semimajor axis
+        limb_dark : str
+            Limb darkening law to use
+        name : str
+            Name metadata for the planet
+        """
         self.per = per
         self.t0 = t0
         self.inc = inc

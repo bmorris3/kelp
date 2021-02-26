@@ -34,7 +34,7 @@ def test_cython_vs_theano():
 
     with pm.Model():
         thermal_phase_curve, T = phase_curve(
-            xi, -0.8, 4.5, 0.575, 0.18, 1, planet.T_s, planet.a, planet.rp_a, 0,
+            xi, -0.8, 4.5, 0.575, 0.18, planet.T_s, planet.a, planet.rp_a, 0,
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
         )
 

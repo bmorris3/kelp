@@ -18,10 +18,10 @@ Next we set some parameters for the model:
 .. code-block:: python
 
     # Set phase curve parameters
-    hotspot_offset = 0  # hotspot offset
+    hotspot_offset = -0.8  # hotspot offset [rad]
     alpha = 0.6
     omega_drag = 4.5
-    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
+    c11 = 0.18        # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
@@ -38,7 +38,7 @@ We initialize a `~kelp.Planet` and `~kelp.Filter` object for the model:
 
     # Import IRAC filter properties
     filt = Filter.from_name(f"IRAC {channel}")
-    filt.bin_down()  # this speeds up the example
+    filt.bin_down(bins=10)  # this speeds up the example
 
 We specify the :math:`C_{m\ell}` terms like so:
 
@@ -46,7 +46,7 @@ We specify the :math:`C_{m\ell}` terms like so:
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0]]
+            [0, c11, 0]]
 
 Let's construct a `~kelp.Model` object,
 
@@ -80,10 +80,10 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
     from kelp import Filter, Planet, Model
 
     # Set phase curve parameters
-    hotspot_offset = 0  # hotspot offset
+    hotspot_offset = -0.8  # hotspot offset [rad]
     alpha = 0.6
     omega_drag = 4.5
-    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
+    c11 = 0.18        # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
@@ -96,11 +96,11 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
 
     # Import IRAC filter properties
     filt = Filter.from_name(f"IRAC {channel}")
-    filt.bin_down()  # this speeds up the example
+    filt.bin_down(10)  # this speeds up the example
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0]]
+            [0, c11, 0]]
 
     # Generate an h_ml basis model representation of the system:
     model = Model(hotspot_offset=hotspot_offset,
@@ -142,10 +142,10 @@ and plot the phase curve that results from this temperature map using
     from kelp import Filter, Planet, Model
 
     # Set phase curve parameters
-    hotspot_offset = 0  # hotspot offset
+    hotspot_offset = -0.8  # hotspot offset [rad]
     alpha = 0.6
     omega_drag = 4.5
-    ln_c11 = -1         # Spherical harmonic power C_{m=1, l=1}
+    c11 = 0.18        # Spherical harmonic power C_{m=1, l=1}
 
     # Set observation parameters
     n = 'HD 189733'     # name of the planetary system
@@ -156,11 +156,11 @@ and plot the phase curve that results from this temperature map using
 
     # Import IRAC filter properties
     filt = Filter.from_name(f"IRAC {channel}")
-    filt.bin_down()  # this speeds up the example
+    filt.bin_down(10)  # this speeds up the example
 
     # These elements will be accessed like C_ml[m][l]:
     C_ml = [[0],
-            [0, np.exp(ln_c11), 0]]
+            [0, c11, 0]]
 
     # Generate an h_ml basis model representation of the system:
     model = Model(hotspot_offset=hotspot_offset,

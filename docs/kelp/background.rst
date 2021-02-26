@@ -76,7 +76,7 @@ the thermal flux of the star, like so:
 
 .. math::
 
-    F_p/F_\star = \left(\frac{R_p}{R_\star}\right)^2 \int_0^\pi \int_{-\xi-\pi/2}^{-\xi+\pi/2} \frac{I_p(\theta, \phi)}{I_\star(\theta, \phi)} \cos(\phi+\xi) \sin^2(\theta) d\phi d\theta \label{eqn:diskint}
+    F_p/F_\star = \frac{1}{\pi I_\star} \left(\frac{R_p}{R_\star}\right)^2 \int_0^\pi \int_{-\xi-\pi/2}^{-\xi+\pi/2} I_p(\theta, \phi) \cos(\phi+\xi) \sin^2(\theta) d\phi d\theta \label{eqn:diskint}
 
 where the intensity :math:`I` is given by
 
