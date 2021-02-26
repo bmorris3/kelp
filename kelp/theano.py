@@ -119,11 +119,11 @@ def h_ml(omega_drag, alpha, theta, phi, C_11, m=one, l=one):
     return result
 
 
-def h_ml_sum(hotspot_offset, omega_drag, alpha,
-                theta2d, phi2d, C_11):
+def h_ml_sum_theano(hotspot_offset, omega_drag, alpha,
+                    theta2d, phi2d, C_11):
     """
     Cythonized implementation of the quadruple loop over: theta's, phi's,
-    l's and m's to compute the h_ml_sum term at C speeds
+    l's and m's to compute the h_ml_sum term
     """
     phase_offset = half * pi
 
@@ -265,8 +265,8 @@ def phase_curve(xi, hotspot_offset, omega_drag,
     filt_transmittance_tt = filt_transmittance[None, None, None, :]
 
     # Cython alternative to the pure python implementation:
-    h_ml_sum = h_ml_sum(hotspot_offset, omega_drag,
-                           alpha, theta2d_tt, phi2d_tt, C_11)
+    h_ml_sum = h_ml_sum_theano(hotspot_offset, omega_drag,
+                               alpha, theta2d_tt, phi2d_tt, C_11)
     T_eq = f * T_s * tt.pow(a_rs, -half)
 
     T = T_eq * tt.pow(one - A_B, half * half) * (one + h_ml_sum)
