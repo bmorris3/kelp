@@ -265,7 +265,7 @@ def phase_curve(xi, hotspot_offset, omega_drag,
     filt_transmittance_tt = filt_transmittance[None, None, None, :]
 
     # Cython alternative to the pure python implementation:
-    h_ml_sum = h_ml_sum_cy(hotspot_offset, omega_drag,
+    h_ml_sum = h_ml_sum(hotspot_offset, omega_drag,
                            alpha, theta2d_tt, phi2d_tt, C_11)
     T_eq = f * T_s * tt.pow(a_rs, -half)
 
