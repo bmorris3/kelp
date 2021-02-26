@@ -264,8 +264,8 @@ class Model(object):
         if cython:
             # Cython alternative to the pure python implementation:
             h_ml_sum = _h_ml_sum_cy(self.hotspot_offset, self.omega_drag,
-                                   self.alpha, theta2d, phi2d, self.C_ml,
-                                   self.lmax)
+                                    self.alpha, theta2d, phi2d, self.C_ml,
+                                    self.lmax)
         else:
             # Slow loops, which have since been cythonized:
             h_ml_sum = np.zeros((n_theta, n_phi))
