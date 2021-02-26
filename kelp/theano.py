@@ -119,7 +119,7 @@ def h_ml(omega_drag, alpha, theta, phi, C_11, m=one, l=one):
     return result
 
 
-def h_ml_sum_cy(hotspot_offset, omega_drag, alpha,
+def h_ml_sum(hotspot_offset, omega_drag, alpha,
                 theta2d, phi2d, C_11):
     """
     Cythonized implementation of the quadruple loop over: theta's, phi's,
@@ -194,12 +194,63 @@ broadcaster = tt.TensorType(floatX, 4 * [True, ])
 
 
 def phase_curve(xi, hotspot_offset, omega_drag,
-                alpha, C_11,
-                lmax, T_s, a_rs, rp_a, A_B,
+                alpha, C_11, T_s, a_rs, rp_a, A_B,
                 theta2d, phi2d, filt_wavelength,
                 filt_transmittance, f):
-    """
-    Compute the phase curve evaluated at phases `xi`.
+    r"""
+    Compute the phase curve evaluated at phases ``xi``.
+
+    .. warning::
+
+        Assumes ``xi`` is sorted, and that ``theta2d`` and ``phi2d`` are
+        linearly spaced and increasing.
+
+    Parameters
+    ----------
+    xi : array-like
+        Orbital phase angle, must be sorted
+    hotspot_offset : float
+        Angle of hotspot offset [radians]
+    omega_drag : float
+        Dimensionless drag frequency
+    alpha : float
+        Dimensionless fluid number
+    C_11 : float
+        Spherical harmonic power in the :math:`m=1\,\ell=1` mode
+    T_s : float [K]
+        Stellar effective temperature
+    a_rs : float
+        Semimajor axis in units of stellar radii
+    rp_a : float
+        Planet radius normalized by the semimajor axis
+    A_B : float
+        Bond albedo
+    theta2d : array-like
+        Grid of latitude values evaluated over the surface of the sphere
+    phi2d : array-like
+        Grid of longitude values evaluated over the surface of the sphere
+    filt_wavelength : array-like
+        Filter transmittance curve wavelengths [m]
+    filt_transmittance : array-like
+        Filter transmittance
+    f : float
+        Greenhouse parameter (typically ~1/sqrt(2)).
+
+    Returns
+    -------
+    fluxes : `~numpy.ndarray`
+        System fluxes as a function of phase angle :math:`\xi`.
+
+    Examples
+    --------
+    Users will typically create the ``theta2d`` and ``phi2d`` grids like so:
+
+    >>> # Set resolution of grid points on sphere:
+    >>> n_phi = 100
+    >>> n_theta = 10
+    >>> phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=floatX)
+    >>> theta = np.linspace(0, np.pi, n_theta, dtype=floatX)
+    >>> theta2d, phi2d = np.meshgrid(theta, phi)
     """
     # Handle broadcasting for 4D tensors
     xi_tt = broadcaster()

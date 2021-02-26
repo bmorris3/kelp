@@ -6,7 +6,7 @@ from astropy.modeling.models import BlackBody
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
 
-from .fast import h_ml_sum_cy, integrated_blackbody, phase_curve
+from .fast import _h_ml_sum_cy, _integrated_blackbody, _phase_curve
 from .registries import PhaseCurve
 
 __all__ = ['Model']
@@ -263,7 +263,7 @@ class Model(object):
 
         if cython:
             # Cython alternative to the pure python implementation:
-            h_ml_sum = h_ml_sum_cy(self.hotspot_offset, self.omega_drag,
+            h_ml_sum = _h_ml_sum_cy(self.hotspot_offset, self.omega_drag,
                                    self.alpha, theta2d, phi2d, self.C_ml,
                                    self.lmax)
         else:
@@ -303,16 +303,16 @@ class Model(object):
         """
 
         if cython:
-            int_bb, func = integrated_blackbody(self.hotspot_offset,
-                                                self.omega_drag,
-                                                self.alpha, self.C_ml,
-                                                self.lmax,
-                                                self.T_s, self.a_rs, self.rp_a,
-                                                self.A_B, n_theta, n_phi,
-                                                self.filt.wavelength.to(
-                                                    u.m).value,
-                                                self.filt.transmittance,
-                                                f=f)
+            int_bb, func = _integrated_blackbody(self.hotspot_offset,
+                                                 self.omega_drag,
+                                                 self.alpha, self.C_ml,
+                                                 self.lmax,
+                                                 self.T_s, self.a_rs, self.rp_a,
+                                                 self.A_B, n_theta, n_phi,
+                                                 self.filt.wavelength.to(
+                                                     u.m).value,
+                                                 self.filt.transmittance,
+                                                 f=f)
             return int_bb, func
 
         else:
@@ -331,10 +331,15 @@ class Model(object):
             return int_bb, lambda theta, phi: interp_bb(theta, phi)[0][0]
 
     def phase_curve(self, xi, n_theta=20, n_phi=200, f=2 ** -0.5, cython=True,
-                    quad=False):
+                    quad=False, check_sorted=True):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
+
+        .. note::
+
+            The ``xi`` axis is assumed to be monotonically increasing when
+            ``check_sorted=False``, ``cython=True`` and ``quad=False``.
 
         Parameters
         ----------
@@ -352,6 +357,9 @@ class Model(object):
         quad : bool
             Use `dblquad` to integrate the temperature map if True,
             else use trapezoidal approximation.
+        check_sorted : bool
+            Check that the ``xi`` values are sorted before passing to cython
+            (carefully turning this off will speed things up a bit)
 
         Returns
         -------
@@ -366,14 +374,7 @@ class Model(object):
             int_bb, interp_blackbody = self.integrated_blackbody(n_theta, n_phi,
                                                                  f, cython)
 
-            # http://vizier.u-strasbg.fr/viz-bin/VizieR-3?-source=J/A%2bA/600/A30/tableab
             def integrand(phi, theta, xi):
-                # # limb-darkening radial distance
-                # rsq_ld = ((sin(phi + xi) * cos(theta - np.pi/2))**2 +
-                #            sin(theta - np.pi/2)**2)
-                # mu = (1 - rsq_ld)**0.5
-                # u1, u2 = u_ld
-                # planet_ld_term = (1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2)
                 return (interp_blackbody(theta, phi) * sin(theta) ** 2 *
                         cos(phi + xi))
 
@@ -389,14 +390,21 @@ class Model(object):
                                     epsrel=100, args=(xi[i],)
                                     )[0] * rp_rs2 / np.pi / planck_star
         else:
-            fluxes = phase_curve(xi.astype(np.float64), self.hotspot_offset,
-                                 self.omega_drag,
-                                 self.alpha, self.C_ml, self.lmax,
-                                 self.T_s, self.a_rs, self.rp_a,
-                                 self.A_B, n_theta, n_phi,
-                                 self.filt.wavelength.to(u.m).value,
-                                 self.filt.transmittance,
-                                 f=f)
+
+            if check_sorted:
+                if not np.all(np.diff(xi) >= 0):
+                    raise ValueError("xi array must be sorted")
+
+            fluxes = _phase_curve(
+                xi.astype(np.float64), self.hotspot_offset,
+                self.omega_drag,
+                self.alpha, self.C_ml, self.lmax,
+                self.T_s, self.a_rs, self.rp_a,
+                self.A_B, n_theta, n_phi,
+                self.filt.wavelength.to(u.m).value,
+                self.filt.transmittance,
+                f=f
+            )
 
         return PhaseCurve(xi, fluxes, channel=self.filt.name)
 

@@ -9,8 +9,8 @@ from cython.parallel import prange
 
 from libc.math cimport sin, cos, exp, pi
 
-__all__ = ["h_ml_sum_cy", "integrate_planck",
-           "integrated_blackbody"]
+__all__ = ["_h_ml_sum_cy", "_integrate_planck",
+           "_integrated_blackbody", "_phase_curve"]
 
 DTYPE = np.float64
 ctypedef np.float64_t DTYPE_t
@@ -135,7 +135,7 @@ cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
     return result
 
 @cython.boundscheck(False)
-def h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
+def _h_ml_sum_cy(float hotspot_offset, float omega_drag, float alpha,
                 double [:, :] theta2d, double [:, :] phi2d, list C, int lmax):
     """
     Cythonized implementation of the quadruple loop over: theta's, phi's,
@@ -348,7 +348,7 @@ cdef float bilinear_interpolate(double [:, :] im,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
+def _integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
                      double [:, :] temperature, double [:, :] T_s,
                      double [:] theta_grid, double [:] phi_grid, float rp_rs,
                      int n_phi, bint return_interp=True):
@@ -379,15 +379,15 @@ def integrate_planck(double [:] filt_wavelength, double [:] filt_trans,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def integrated_blackbody(float hotspot_offset, float omega_drag,
+def _integrated_blackbody(float hotspot_offset, float omega_drag,
                          float alpha, list C_ml,
                          int lmax, float T_s, float a_rs, float rp_a, float A_B,
                          int n_theta, int n_phi, double [:] filt_wavelength,
                          double [:] filt_transmittance, float f=2**-0.5):
     """
-    Compute the temperature field using `h_ml_sum_cy`, then integrate the
+    Compute the temperature field using `_h_ml_sum_cy`, then integrate the
     temperature map over wavelength and take the ratio of blackbodies with
-    `integrate_planck`
+    `_integrate_planck`
     """
     cdef float T_eq, rp_rs
     cdef np.ndarray[DTYPE_t, ndim=1] phi = np.linspace(-2 * pi, 2 * pi, n_phi, dtype=DTYPE)
@@ -398,7 +398,7 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
     theta2d, phi2d = np.meshgrid(theta, phi)
 
     # Cython alternative to the pure python implementation:
-    cdef np.ndarray[DTYPE_t, ndim=2] h_ml_sum = h_ml_sum_cy(hotspot_offset,
+    cdef np.ndarray[DTYPE_t, ndim=2] h_ml_sum = _h_ml_sum_cy(hotspot_offset,
                                                             omega_drag,
                                                             alpha, theta2d,
                                                             phi2d, C_ml, lmax)
@@ -408,7 +408,7 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
 
     rp_rs = rp_a * a_rs
 
-    int_bb, func = integrate_planck(filt_wavelength,
+    int_bb, func = _integrate_planck(filt_wavelength,
                                     filt_transmittance, T,
                                     T_s * np.ones_like(T),
                                     theta, phi, rp_rs, n_phi)
@@ -417,11 +417,11 @@ def integrated_blackbody(float hotspot_offset, float omega_drag,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
-                float alpha, list C_ml,
-                int lmax, float T_s, float a_rs, float rp_a, float A_B,
-                int n_theta, int n_phi, double [:] filt_wavelength,
-                double [:] filt_transmittance, float f=2**-0.5):
+def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
+                 float alpha, list C_ml,
+                 int lmax, float T_s, float a_rs, float rp_a, float A_B,
+                 int n_theta, int n_phi, double [:] filt_wavelength,
+                 double [:] filt_transmittance, float f=2**-0.5):
     """
     Compute the phase curve evaluated at phases `xi`.
     """
@@ -439,7 +439,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef double [::1] fluxes_view = fluxes
 
     # Cython alternative to the pure python implementation:
-    h_ml_sum = h_ml_sum_cy(hotspot_offset, omega_drag,
+    h_ml_sum = _h_ml_sum_cy(hotspot_offset, omega_drag,
                            alpha, theta2d, phi2d, C_ml,
                            lmax)
     T_eq = f * T_s * a_rs**-0.5
@@ -448,7 +448,7 @@ def phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
 
     rp_rs = rp_a * a_rs
     cdef np.ndarray[DTYPE_t, ndim=2] ones = np.ones((n_theta, n_phi), dtype=DTYPE)
-    int_bb = integrate_planck(filt_wavelength,
+    int_bb = _integrate_planck(filt_wavelength,
                               filt_transmittance, T,
                               T_s * ones,
                               theta, phi, rp_rs, n_phi,

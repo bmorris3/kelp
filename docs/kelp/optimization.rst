@@ -124,7 +124,7 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x, f=f).flux
+        return model.phase_curve(x, f=f, check_sorted=False).flux
 
     def lnprior(p):
         """
@@ -239,7 +239,7 @@ measure the uncertainty on the maximum-likelihood parameters:
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x, f=f).flux
+        return model.phase_curve(x, f=f, check_sorted=False).flux
 
     def lnprior(p):
         """
@@ -380,19 +380,28 @@ the theano module:
     theta2d, phi2d = np.meshgrid(theta, phi)
 
     with pm.Model() as hml_model:
-        delta_phi = pm.Uniform("delta_phi", lower=np.radians(-90), upper=np.radians(90), testval=np.radians(-40))
-        C_11 = pm.Uniform("C_11", lower=0.01, upper=0.3, testval=0.15)
-        f = pm.Normal("f", mu=2**-0.5, sigma=0.1)
+        delta_phi = pm.Uniform(
+            "delta_phi", lower=np.radians(-90), upper=np.radians(90),
+            testval=np.radians(-40)
+        )
+        C_11 = pm.Uniform(
+            "C_11", lower=0.01, upper=0.3, testval=0.15
+        )
+        f = pm.Normal(
+            "f", mu=2**-0.5, sigma=0.1
+        )
 
         thermal_phase_curve, temperature_map, ps = theano.phase_curve(
             xi.astype(floatX), delta_phi,
-            omega, alpha, C_11, lmax, T_s, a_rs, rp_a, A_B,
+            omega, alpha, C_11, T_s, a_rs, rp_a, A_B,
             theta2d.astype(floatX), phi2d.astype(floatX),
             filt.wavelength.to(u.m).value.astype(floatX),
             filt.transmittance.astype(floatX), true_f
         )
 
-        pm.Normal("obs", mu=thermal_phase_curve, observed=obs, sigma=obs_err)
+        pm.Normal(
+            "obs", mu=thermal_phase_curve, observed=obs, sigma=obs_err
+        )
 
         trace = pm.sample(
             draws=1000, tune=1000,
