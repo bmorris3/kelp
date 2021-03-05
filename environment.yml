@@ -4,10 +4,6 @@ channels:
   - anaconda
   - pyviz
 dependencies:
-  - pymc3
-  - llvm
-  - clang-11
-  - exoplanet
   - geoviews
   - nbsite
   - nbconvert==5.6.1
