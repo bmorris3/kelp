@@ -17,3 +17,4 @@ package written in Python. The source code is available on
   kelp/gettingstarted.rst
   kelp/optimization.rst
   kelp/index.rst
+  gallery/index.rst

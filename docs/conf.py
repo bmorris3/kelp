@@ -154,7 +154,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
               [author], 1)]
 
 
-extensions += ['bokeh.sphinxext.bokeh_plot']
+extensions += ['numpydoc']
 
 # -- Options for the edit_on_github extension ---------------------------------
 
@@ -196,3 +196,27 @@ github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_pr
 #     dtype, target = line.split(None, 1)
 #     target = target.strip()
 #     nitpick_ignore.append((dtype, six.u(target)))
+
+from nbsite.shared_conf import (html_context, default_edge_attrs, extensions as nbsiteext, setup)
+
+source_suffix = '.rst'
+master_doc = 'index'
+pygments_style = 'sphinx'
+exclude_patterns += ['_build']
+# html_static_path += [os.path.abspath(os.path.join(os.path.dirname(__file__), '_static'))]
+
+extensions += ['nbsite.gallery'] + nbsiteext
+
+_NAV =  (
+    ('Gallery', 'gallery/index'),
+)
+
+nbsite_gallery_conf = {
+  # 'backends': ['bokeh'],
+  'default_extensions': ['*.ipynb'],
+  'enable_download': True,
+  'examples_dir': os.path.join('..', 'examples'),
+  'galleries': {},
+  # 'within_subsection_order': lambda key: key,
+  # 'skip': 'gallery'
+}

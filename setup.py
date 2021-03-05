@@ -63,7 +63,9 @@ For more information, see:
 """
 
 if 'build_docs' in sys.argv or 'build_sphinx' in sys.argv:
-    print(DOCS_HELP)
+    print(DOCS_HELP +
+          """
+          """)
     sys.exit(1)
 
 VERSION_TEMPLATE = """
