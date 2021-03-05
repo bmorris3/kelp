@@ -197,26 +197,21 @@ github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_pr
 #     target = target.strip()
 #     nitpick_ignore.append((dtype, six.u(target)))
 
-from nbsite.shared_conf import (html_context, default_edge_attrs, extensions as nbsiteext, setup)
+extensions += ["rtds_action"]
 
-source_suffix = '.rst'
-master_doc = 'index'
-pygments_style = 'sphinx'
-exclude_patterns += ['_build']
-# html_static_path += [os.path.abspath(os.path.join(os.path.dirname(__file__), '_static'))]
+# The name of your GitHub repository
+rtds_action_github_repo = "bmorris3/kelp"
 
-extensions += ['nbsite.gallery'] + nbsiteext
+# The path where the artifact should be extracted
+# Note: this is relative to the conf.py file!
+rtds_action_path = "gallery"
 
-_NAV =  (
-    ('Gallery', 'gallery/index'),
-)
+# The "prefix" used in the `upload-artifact` step of the action
+rtds_action_artifact_prefix = "notebooks-for-"
 
-nbsite_gallery_conf = {
-  # 'backends': ['bokeh'],
-  'default_extensions': ['*.ipynb'],
-  'enable_download': True,
-  'examples_dir': os.path.join('..', 'examples'),
-  'galleries': {},
-  # 'within_subsection_order': lambda key: key,
-  # 'skip': 'gallery'
-}
+# A GitHub personal access token is required, more info below
+rtds_action_github_token = os.environ["GITHUB_TOKEN"]
+
+# Whether or not to raise an error on ReadTheDocs if the
+# artifact containing the notebooks can't be downloaded (optional)
+rtds_action_error_if_missing = False
