@@ -1,11 +1,8 @@
 name: kelp
 channels:
   - conda-forge
-  - anaconda
   - pyviz
 dependencies:
   - geoviews
   - nbsite
   - nbconvert==5.6.1
-  - geckodriver
-  - selenium
