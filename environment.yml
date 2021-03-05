@@ -7,7 +7,5 @@ dependencies:
   - geoviews
   - nbsite
   - nbconvert==5.6.1
-  - python-chromedriver-binary
-  - firefox
   - geckodriver
   - selenium
