@@ -5,6 +5,4 @@ channels:
 dependencies:
   - nbconvert==5.6.1
   - nbsite
-  - holoviews
-  - bokeh
   - geoviews
