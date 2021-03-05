@@ -18,6 +18,21 @@ jobs:
           python -m pip install -U pip
           python -m pip install -r .github/workflows/requirements.txt
 
+      - name: Set up python ${{ matrix.python }} on ${{ matrix.os }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Add conda to system path
+        run: |
+          # $CONDA is an environment variable pointing to the root of the miniconda directory
+          echo $CONDA/bin >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda env update --file environment.yml --name base
+
       - name: Execute the notebooks
         run: |
           jupytext --to ipynb --execute docs/gallery/*.py
