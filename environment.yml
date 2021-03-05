@@ -3,3 +3,5 @@ channels:
   - conda-forge
 dependencies:
   - nbconvert==5.6.1
+  - nbsite
+  - theano

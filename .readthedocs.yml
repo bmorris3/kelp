@@ -4,7 +4,10 @@ conda:
   environment: environment.yml
 
 build:
-  image: stable
+  image: latest
+
+sphinx:
+  builder: html
 
 python:
   version: 3.7
