@@ -1,8 +1,4 @@
 name: kelp
 channels:
   - conda-forge
-  - pyviz
 dependencies:
-  - geoviews
-  - nbsite
-  - nbconvert==5.6.1
