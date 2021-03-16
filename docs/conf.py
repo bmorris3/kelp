@@ -198,4 +198,4 @@ github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_pr
 on_rtd = True #os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
     import git_lfs
-    git_lfs.fetch(os.path.join(os.path.dirname(__file__), os.path.pardir))
+    git_lfs.fetch(setup_cfg['github_project'])
