@@ -18,7 +18,9 @@ package written in Python. The source code is available on
   kelp/gettingstarted.rst
   kelp/interactive.rst
   kelp/optimization.rst
+  kelp/reflected.rst
   kelp/index.rst
+
 
 Interactive demo
 ^^^^^^^^^^^^^^^^

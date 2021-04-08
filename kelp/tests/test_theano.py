@@ -5,10 +5,10 @@ import astropy.units as u
 
 from ..core import Model
 from ..registries import Planet, Filter
-from ..theano import phase_curve
 
 
 def test_cython_vs_theano():
+    from ..theano.theano import thermal_phase_curve
     # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
     f = 0.68
     planet = Planet.from_name('HD 189733')
@@ -33,12 +33,12 @@ def test_cython_vs_theano():
     cython_phase_curve = m.phase_curve(xi, f=f).flux
 
     with pm.Model():
-        thermal_phase_curve, T = phase_curve(
+        thermal_pc, T = thermal_phase_curve(
             xi, -0.8, 4.5, 0.575, 0.18, planet.T_s, planet.a, planet.rp_a, 0,
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
         )
 
-        theano_phase_curve = xo.eval_in_model(thermal_phase_curve)
+        theano_phase_curve = xo.eval_in_model(thermal_pc)
 
     np.testing.assert_allclose(
         cython_phase_curve, theano_phase_curve, atol=1e-5
