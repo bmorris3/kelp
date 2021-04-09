@@ -1,6 +1,6 @@
 import numpy as np
-import exoplanet as xo
 import pymc3 as pm
+import pymc3_ext as pmx
 import astropy.units as u
 
 from ..core import Model
@@ -38,7 +38,7 @@ def test_cython_vs_theano():
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
         )
 
-        theano_phase_curve = 1e6 * xo.eval_in_model(thermal_pc)
+        theano_phase_curve = 1e6 * pmx.eval_in_model(thermal_pc)
 
     np.testing.assert_allclose(
         cython_phase_curve, theano_phase_curve, atol=5

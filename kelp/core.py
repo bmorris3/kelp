@@ -6,7 +6,6 @@ from scipy.interpolate import RectBivariateSpline
 
 import astropy.units as u
 from astropy.modeling.models import BlackBody
-from astropy.utils.decorators import deprecated
 
 from .fast import _h_ml_sum_cy, _integrated_blackbody, _phase_curve
 from .registries import PhaseCurve
