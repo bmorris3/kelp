@@ -551,7 +551,7 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
     return - ((2 * C_3 + 1) - tt.sqrt(1 + 8 * C_3)) / (2 * C_3)
 
 
-def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, g, x1, x2,
+def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
                                         A_g, a_rp):
     """
     Reflected light phase curve for an inhomogeneous sphere by
@@ -568,8 +568,6 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, g, x1, x2,
         Additional single-scattering albedo of the more reflective region,
         such that the single-scattering albedo of the reflective region is
         ``omega_0 + omega_prime``. Defined on (0, ``1-omega_0``).
-    g : tensor-like
-        Scattering asymmetry factor, ranges from (-1, 1).
     x1 : tensor-like
         Start longitude of the darker region [radians] on (-pi/2, pi/2)
     x2 : tensor-like
@@ -582,9 +580,14 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, g, x1, x2,
     flux_ratio_ppm : tensor-like
         Flux ratio between the reflected planetary flux and the stellar flux
         in units of ppm.
+    g : tensor-like
+        Scattering asymmetry factor on (-1, 1)
     q : tensor-like
         Integral phase function
     """
+
+    g = _g_from_ag(A_g, omega_0, omega_prime, x1, x2)
+
     # Redefine alpha to be on (-pi, pi)
     alpha = (2 * np.pi * phases - np.pi).astype(floatX)
     abs_alpha = np.abs(alpha).astype(floatX)
@@ -730,4 +733,4 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, g, x1, x2,
 
     # F_0 = F_S_alpha0 + F_L_alpha0 + F_C_alpha0
 
-    return flux_ratio_ppm, q
+    return flux_ratio_ppm, g, q

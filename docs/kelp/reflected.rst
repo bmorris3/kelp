@@ -2,16 +2,22 @@
 Reflected Light
 ***************
 
-Homogeneous reflectivity map
-----------------------------
-
 kelp implements the reflected light phase curve parameterization for an
 homogeneous planetary atmospheres as derived by
-`Heng, Morris & Kitzmann (HKM; 2021) <https://arxiv.org/abs/2103.02673>`_.
-The HKM reflected light model is a function of two fundamental
+`Heng, Morris & Kitzmann (HMK; 2021) <https://arxiv.org/abs/2103.02673>`_.
+The HMK reflected light model is a function of two fundamental
 parameters which describe the scattering in the planetary atmosphere:
 the single-scattering albedo :math:`\omega`; and the scattering
 asymmetry factor :math:`g`.
+
+Below, we'll show how to use the reflected light
+formulation for a homogeneous planetary atmosphere to fit the Kepler phase curve
+of HAT-P-7 b; then we'll move on to the case of an inhomogeneous atmosphere with
+the phase curve of Kepler-7 b.
+
+
+Homogeneous reflectivity map
+----------------------------
 
 We can implement a model for the Kepler phase curve of HAT-P-7 b, which
 combines all aspects of a challenging phase curve (except atmospheric
@@ -512,4 +518,377 @@ contributions from each phase curve component shown in different colors.
 Inhomogeneous reflectivity map
 ------------------------------
 
-Coming soon.
+Kepler-7 b is a warm Jupiter with an insignificant thermal emission contribution
+to the Kepler phase curve, but with a significant phase curve asymmetry,
+possibly resulting from an inhomogeneous albedo distribution on the surface of
+the planet. In this example, we'll give two parameters for the single scattering
+albedo in the brighter and darker regions, one scattering asymmetry factor, and
+one geometric albedo.
+
+.. note::
+
+    The analysis presented in this documentation is meant to be a
+    quick-and-dirty example that demonstrates the capabilities of kelp, but is
+    not meant to precisely reproduce the results of Heng, Morris & Kitzmann
+    (2021). The results presented in that paper require a more complex and
+    expensive model, so we opt to show a simpler and cheaper model for this
+    tutorial.
+
+As with the previous example, we begin with some imports:
+
+.. code-block:: python
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy.stats import binned_statistic
+
+    import theano
+    floatX = 'float64'
+    theano.config.floatX = floatX
+
+    import exoplanet as xo
+    import pymc3 as pm
+    import pymc3_ext as pmx
+    from corner import corner
+
+    from lightkurve import search_lightcurve
+
+    import astropy.units as u
+    from astropy.constants import R_jup, R_sun
+    from astropy.stats import sigma_clip, mad_std
+
+    from kelp.theano import reflected_phase_curve_inhomogeneous
+
+We also define the system parameters:
+
+.. code-block:: python
+
+    t0 = 2454967.27687  # Esteves et al. 2015
+    period = 4.8854892  # Esteves et al. 2015
+    rp = 1.622 * R_jup  # Esteves et al. 2015
+    rstar = 1.966 * R_sun  # ±0.013 (NASA Exoplanet Archive)
+    a = 0.06067 * u.AU  # Esteves et al. 2015
+    duration = 5.1313 / 24  # Morton et al. 2016
+    b = 0.5599  # Esteves et al. 2015 +0.0045-0.0046
+    rho_star = 0.238 * u.g / u.cm ** 3  # Southworth et al. 2012 ±0.010
+    T_s = 5933  # NASA Exoplanet Archive
+    a_rs = float(a / rstar)
+    a_rp = float(a / rp)
+    rp_rstar = float(rp / rstar)
+    eclipse_half_dur = duration / period / 2
+
+
+And we use ``lightkurve`` to download the entire Kepler-7 b long cadence light
+curve over all quarters:
+
+.. code-block:: python
+
+    lcf = search_lightcurve(
+        "Kepler-7", mission="Kepler", cadence="long",
+    ).download_all()
+
+    slc = lcf.stitch().remove_nans()
+
+    phases = ((slc.time.jd - t0) % period) / period
+    in_eclipse = np.abs(phases - 0.5) < eclipse_half_dur
+    in_transit = (phases < 1.2 * eclipse_half_dur) | (
+                phases > 1 - 1.2 * eclipse_half_dur)
+    out_of_transit = np.logical_not(in_transit)
+
+Next we sigma clip, normalize, and bin the Kepler-7 b observations:
+
+.. code-block:: python
+
+    sc = sigma_clip(
+        np.ascontiguousarray(slc.flux[out_of_transit], dtype=np.float64),
+        maxiters=100, sigma=8, stdfunc=mad_std
+    )
+
+    phase = np.ascontiguousarray(phases[out_of_transit][~sc.mask], dtype=np.float64)
+    time = np.ascontiguousarray(slc.time.jd[out_of_transit][~sc.mask],
+                                dtype=np.float64)
+
+    bin_in_eclipse = np.abs(phase - 0.5) < eclipse_half_dur
+    unbinned_flux_mean = np.mean(sc[~sc.mask].data)
+
+    unbinned_flux_mean_ppm = 1e6 * (unbinned_flux_mean - 1)
+    flux_normed = np.ascontiguousarray(
+        1e6 * (sc[~sc.mask].data / unbinned_flux_mean - 1.0), dtype=np.float64)
+    flux_normed_err = np.ascontiguousarray(
+        1e6 * slc.flux_err[out_of_transit][~sc.mask].value, dtype=np.float64)
+
+    bins = 100
+    bs = binned_statistic(phase, flux_normed, statistic=np.median, bins=bins)
+
+    bs_err = binned_statistic(phase, flux_normed_err,
+                              statistic=lambda x: np.median(x) / len(x) ** 0.5,
+                              bins=bins)
+
+    binphase = 0.5 * (bs.bin_edges[1:] + bs.bin_edges[:-1])
+    binflux = bs.statistic - np.median(bs.statistic[np.abs(binphase - 0.5) < 0.01])
+    binerror = bs_err.statistic
+
+Now we construct a the phase curve model. This time there are only two
+components: the eclipse and the inhomogeneous reflected light phase curve.
+
+For the purposes of making this example fast, we will fix the single scattering
+albedo of the darker region to :math:`\omega_0 = 0` and the single scattering
+albedo of the more reflective region to :math:`\omega^\prime = 0.95`, and fix
+the start and stop longitudes of the darker region ``x1, x2 = 0, 0.8`` radians.
+We'll also add a constant ``offset`` term to the entire phase curve to account
+for the light curve normalization.
+
+.. code-block:: python
+
+    with pm.Model() as model:
+        # Define a Keplerian orbit:
+        orbit = xo.orbits.KeplerianOrbit(
+            period=period, t0=0, b=b, rho_star=rho_star.to(u.g / u.cm ** 3),
+            r_star=float(rstar / R_sun)
+        )
+
+        # Compute the eclipse model (no LD):
+        eclipse_light_curves_kepler = xo.LimbDarkLightCurve([0, 0]).get_light_curve(
+            orbit=orbit._flip(rp_rstar), r=orbit.r_star,
+            t=binphase.astype(floatX) * period,
+            texp=(30 * u.min).to(u.d).value
+        )
+
+        # Normalize the eclipse model:
+        eclipse_kepler = 1 + pm.math.sum(eclipse_light_curves_kepler, axis=-1)
+
+        omega_0 = 0
+        omega_prime = 0.95
+
+        # Define the start and stop longitudes of the darker region
+        x1 = 0  # [radians]
+        x2 = 0.8  # [radians]
+
+        # Sample for the geometric albedo
+        A_g = pm.Uniform('A_g', lower=0, upper=1)
+
+        # construct an inhomogeneous reflected light phase curve model
+        flux_ratio_ppm, g, q = reflected_phase_curve_inhomogeneous(
+            binphase, omega_0, omega_prime, x1, x2, A_g, a_rp
+        )
+
+        # Apply a constant offset to the entire phase curve to account for normalization bias
+        offset = pm.Uniform('offset', lower=-20, upper=20)
+
+        # Construct a composite phase curve model
+        flux_norm = eclipse_kepler * flux_ratio_ppm + offset
+
+        # Keep track of the q and g values at each step in the chains
+        pm.Deterministic('q', q)
+        pm.Deterministic('g', g)
+
+        # Construct our likelihood
+        pm.Normal('obs_kepler', mu=flux_norm, sigma=binerror, observed=binflux)
+
+        # Solve for a quick best-fit using scipy:
+        map_soln = pm.find_MAP()
+
+        # Plot the results
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(binphase, binflux, 'k.')
+        ax.plot(binphase, xo.eval_in_model(flux_norm, map_soln), 'r', lw=2,
+                label='composite')
+        plt.show()
+
+Now that the model is constructed, we're ready to sample from the posterior
+distribution for the geometric albedo, the integral phase function, and the
+scattering asymmetry factor, which we do again with
+`pymc3-ext <https://github.com/exoplanet-dev/pymc3-ext>`_ for the most efficient
+posterior sampling of our degenerate phase curve parameterization:
+
+.. code-block:: python
+
+    with model:
+        trace = pmx.sample(
+            draws=1000, tune=100, compute_convergence_checks=False,
+            target_accept=0.95, initial_accept=0.2,
+            return_inferencedata=False,
+        )
+
+We can plot the results with the following commands:
+
+.. code-block:: python
+
+    corner(pm.trace_to_dataframe(trace));
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    ax.errorbar(binphase, binflux, binerror, fmt='.', color='k', ecolor='silver')
+    with model:
+        for i, sample in enumerate(xo.get_samples_from_trace(trace, size=5)):
+            ax.plot(binphase, xo.eval_in_model(flux_norm, sample), 'r')
+
+    ax.set(xlabel='Phase', ylabel='$F_p/F_\mathrm{star}$ [ppm]',
+              title='Kepler-7 b')
+
+    for sp in ['right', 'top']:
+        ax.spines[sp].set_visible(False)
+
+.. plot::
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy.stats import binned_statistic
+
+    import theano
+    floatX = 'float64'
+    theano.config.floatX = floatX
+
+    import exoplanet as xo
+    import pymc3 as pm
+    import pymc3_ext as pmx
+    from corner import corner
+
+    from lightkurve import search_lightcurve
+
+    import astropy.units as u
+    from astropy.constants import R_jup, R_sun
+
+    from kelp.theano import reflected_phase_curve_inhomogeneous
+
+
+    t0 = 2454967.27687  # Esteves et al. 2015
+    period = 4.8854892  # Esteves et al. 2015
+    rp = 1.622 * R_jup  # Esteves et al. 2015
+    rstar = 1.966 * R_sun  # ±0.013 (NASA Exoplanet Archive)
+    a = 0.06067 * u.AU  # Esteves et al. 2015
+    duration = 5.1313 / 24  # Morton et al. 2016
+    b = 0.5599  # Esteves et al. 2015 +0.0045-0.0046
+    rho_star = 0.238 * u.g / u.cm ** 3  # Southworth et al. 2012 ±0.010
+    T_s = 5933  # NASA Exoplanet Archive
+    a_rs = float(a / rstar)
+    a_rp = float(a / rp)
+    rp_rstar = float(rp / rstar)
+    eclipse_half_dur = duration / period / 2
+
+
+    lcf = search_lightcurve(
+        "Kepler-7", mission="Kepler", cadence="long",
+    ).download_all()
+
+
+    slc = lcf.stitch().remove_nans()
+
+    phases = ((slc.time.jd - t0) % period) / period
+    in_eclipse = np.abs(phases - 0.5) < eclipse_half_dur
+    in_transit = (phases < 1.2 * eclipse_half_dur) | (
+                phases > 1 - 1.2 * eclipse_half_dur)
+    out_of_transit = np.logical_not(in_transit)
+
+    from astropy.stats import sigma_clip, mad_std
+
+    sc = sigma_clip(
+        np.ascontiguousarray(slc.flux[out_of_transit], dtype=np.float64),
+        maxiters=100, sigma=8, stdfunc=mad_std
+    )
+
+    phase = np.ascontiguousarray(phases[out_of_transit][~sc.mask], dtype=np.float64)
+    time = np.ascontiguousarray(slc.time.jd[out_of_transit][~sc.mask],
+                                dtype=np.float64)
+
+    bin_in_eclipse = np.abs(phase - 0.5) < eclipse_half_dur
+    unbinned_flux_mean = np.mean(sc[~sc.mask].data)  # .mean()
+
+    unbinned_flux_mean_ppm = 1e6 * (unbinned_flux_mean - 1)
+    flux_normed = np.ascontiguousarray(
+        1e6 * (sc[~sc.mask].data / unbinned_flux_mean - 1.0), dtype=np.float64)
+    flux_normed_err = np.ascontiguousarray(
+        1e6 * slc.flux_err[out_of_transit][~sc.mask].value, dtype=np.float64)
+
+    bins = 100
+    bs = binned_statistic(phase, flux_normed, statistic=np.median, bins=bins)
+
+    bs_err = binned_statistic(phase, flux_normed_err,
+                              statistic=lambda x: np.median(x) / len(x) ** 0.5,
+                              bins=bins)
+
+    binphase = 0.5 * (bs.bin_edges[1:] + bs.bin_edges[:-1])
+    binflux = bs.statistic - np.median(bs.statistic[np.abs(binphase - 0.5) < 0.01])
+    binerror = bs_err.statistic
+
+
+    with pm.Model() as model:
+        # Define a Keplerian orbit:
+        orbit = xo.orbits.KeplerianOrbit(
+            period=period, t0=0, b=b, rho_star=rho_star.to(u.g / u.cm ** 3),
+            r_star=float(rstar / R_sun)
+        )
+
+        # Compute the eclipse model (no LD):
+        eclipse_light_curves_kepler = xo.LimbDarkLightCurve([0, 0]).get_light_curve(
+            orbit=orbit._flip(rp_rstar), r=orbit.r_star,
+            t=binphase.astype(floatX) * period,
+            texp=(30 * u.min).to(u.d).value
+        )
+
+        # Normalize the eclipse model:
+        eclipse_kepler = 1 + pm.math.sum(eclipse_light_curves_kepler, axis=-1)
+
+        omega_0 = 0
+        omega_prime = 0.95
+
+        # Define the start and stop longitudes of the darker region
+        x1 = 0  # [radians]
+        x2 = 0.8  # [radians]
+
+        # Sample for the geometric albedo
+        A_g = pm.Uniform('A_g', lower=0, upper=1)
+
+        # construct an inhomogeneous reflected light phase curve model
+        flux_ratio_ppm, g, q = reflected_phase_curve_inhomogeneous(
+            binphase, omega_0, omega_prime, x1, x2, A_g, a_rp
+        )
+
+        # Apply a constant offset to the entire phase curve to account for normalization bias
+        offset = pm.Uniform('offset', lower=-20, upper=20)
+
+        # Construct a composite phase curve model
+        flux_norm = eclipse_kepler * flux_ratio_ppm + offset
+
+        # Keep track of the q and g values at each step in the chains
+        pm.Deterministic('q', q)
+        pm.Deterministic('g', g)
+
+        # Construct our likelihood
+        pm.Normal('obs_kepler', mu=flux_norm, sigma=binerror, observed=binflux)
+
+        # Solve for a quick best-fit using scipy:
+        map_soln = pm.find_MAP()
+
+    with model:
+        trace = pmx.sample(
+            draws=1000, tune=100, compute_convergence_checks=False,
+            target_accept=0.95, initial_accept=0.2,
+            return_inferencedata=False,
+            cores=1, chains=1
+        )
+
+
+    corner(pm.trace_to_dataframe(trace));
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    ax.errorbar(binphase, binflux, binerror, fmt='.', color='k', ecolor='silver')
+    with model:
+        for i, sample in enumerate(xo.get_samples_from_trace(trace, size=5)):
+            ax.plot(binphase, xo.eval_in_model(flux_norm, sample), 'r',
+                       label='composite' if i == 0 else None)
+
+    ax.set(xlabel='Phase', ylabel='$F_p/F_\mathrm{star}$ [ppm]',
+              title='Kepler-7 b')
+
+    for sp in ['right', 'top']:
+        ax.spines[sp].set_visible(False)
+
+In the corner plot above, you'll see that the solution has a geometric albedo
+near :math:`A_g = 0.24`, and a scattering asymmetry factor near zero. The
+draws from the posteriors for each parameter produce phase curve models that
+are asymmetric (as we intended) which match the shape of the observations well,
+despite having only a few free parameters.
