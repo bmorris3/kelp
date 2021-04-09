@@ -1,10 +1,12 @@
 from math import sin, cos
 
-import astropy.units as u
 import numpy as np
-from astropy.modeling.models import BlackBody
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
+
+import astropy.units as u
+from astropy.modeling.models import BlackBody
+from astropy.utils.decorators import deprecated
 
 from .fast import _h_ml_sum_cy, _integrated_blackbody, _phase_curve
 from .registries import PhaseCurve
@@ -82,13 +84,105 @@ def H(l, theta, alpha):
                 1680 * tilda_mu(theta, alpha))
 
 
+def _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha, sort):
+    """
+    Integral phase function q for a generic, possibly asymmetric reflectivity
+    map
+    """
+    return np.trapz(Psi[sort] * sin_abs_sort_alpha, sort_alpha)
+
+
+def reflected_phase_curve(xi, omega, g, a_rp):
+    """
+    Reflected light phase curve for a homogeneous sphere by
+    Heng, Morris & Kitzmann (2021).
+
+    Parameters
+    ----------
+    xi : `~np.ndarray`
+        Orbital phases of each observation defined on (-pi, pi)
+    omega : tensor-like
+        Single-scattering albedo as defined in
+    g : tensor-like
+        Scattering asymmetry factor, ranges from (-1, 1).
+    a_rp : float, tensor-like
+        Semimajor axis scaled by the planetary radius
+
+    Returns
+    -------
+    flux_ratio_ppm : `~np.ndarray`
+        Flux ratio between the reflected planetary flux and the stellar flux in
+        units of ppm.
+    A_g : float
+        Geometric albedo derived for the planet given {omega, g}.
+    q : float
+        Integral phase function
+    """
+    phases = (xi + np.pi) / 2 / np.pi
+
+    # Convert orbital phase on (0, 1) to "alpha" on (0, np.pi)
+    alpha = (2 * np.pi * phases - np.pi)
+    abs_alpha = np.abs(alpha)
+    alpha_sort_order = np.argsort(alpha)
+    sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order])
+    sort_alpha = alpha[alpha_sort_order]
+
+    gamma = np.sqrt(1 - omega)
+    eps = (1 - gamma) / (1 + gamma)
+
+    # Equation 34 for Henyey-Greestein
+    P_star = (1 - g ** 2) / (1 + g ** 2 +
+                             2 * g * np.cos(alpha)) ** 1.5
+    # Equation 36
+    P_0 = (1 - g) / (1 + g) ** 2
+
+    # Equation 10:
+    Rho_S = P_star - 1 + 0.25 * ((1 + eps) * (2 - eps)) ** 2
+    Rho_S_0 = P_0 - 1 + 0.25 * ((1 + eps) * (2 - eps)) ** 2
+    Rho_L = 0.5 * eps * (2 - eps) * (1 + eps) ** 2
+    Rho_C = eps ** 2 * (1 + eps) ** 2
+
+    alpha_plus = np.sin(abs_alpha / 2) + np.cos(abs_alpha / 2)
+    alpha_minus = np.sin(abs_alpha / 2) - np.cos(abs_alpha / 2)
+
+    # Equation 11:
+    Psi_0 = np.log((1 + alpha_minus) * (alpha_plus - 1) /
+                   (1 + alpha_plus) / (1 - alpha_minus))
+
+    Psi_S = 1 - 0.5 * (np.cos(abs_alpha / 2) -
+                       1.0 / np.cos(abs_alpha / 2)) * Psi_0
+    Psi_L = (np.sin(abs_alpha) + (np.pi - abs_alpha)
+             * np.cos(abs_alpha)) / np.pi
+    Psi_C = (-1 + 5 / 3 * np.cos(abs_alpha / 2) ** 2 - 0.5 *
+             np.tan(abs_alpha / 2) * np.sin(abs_alpha / 2) ** 3 * Psi_0)
+
+    # Equation 8:
+    A_g = omega / 8 * (P_0 - 1) + eps / 2 + eps ** 2 / 6 + eps ** 3 / 24
+
+    # Equation 9:
+    Psi = ((12 * Rho_S * Psi_S + 16 * Rho_L *
+            Psi_L + 9 * Rho_C * Psi_C) /
+           (12 * Rho_S_0 + 16 * Rho_L + 6 * Rho_C))
+
+    # Fix the case when the phase angle is exactly 0 or 1:
+    Psi[np.isnan(Psi)] = 0
+
+    flux_ratio_ppm = 1e6 * (a_rp ** -2 * A_g * Psi)
+
+    q = _integral_phase_function(
+        Psi, sin_abs_sort_alpha, sort_alpha, alpha_sort_order
+    )
+
+    return flux_ratio_ppm, A_g, q
+
 class Model(object):
     """
     Planetary system object for generating phase curves
     """
 
-    def __init__(self, hotspot_offset, alpha, omega_drag, A_B, C_ml, lmax,
-                 a_rs=None, rp_a=None, T_s=None, planet=None, filt=None):
+    def __init__(self, hotspot_offset=None, alpha=None, omega_drag=None,
+                 A_B=None, C_ml=None, lmax=None, a_rs=None, rp_a=None, T_s=None,
+                 planet=None, filt=None):
         r"""
         Parameters
         ----------
@@ -330,8 +424,84 @@ class Model(object):
                                             kx=1, ky=1)
             return int_bb, lambda theta, phi: interp_bb(theta, phi)[0][0]
 
-    def phase_curve(self, xi, n_theta=20, n_phi=200, f=2 ** -0.5, cython=True,
-                    quad=False, check_sorted=True):
+    def reflected_phase_curve(self, xi, omega, g):
+        r"""
+        Reflected light phase curve for a homogeneous sphere by
+        Heng, Morris & Kitzmann (2021).
+
+        Parameters
+        ----------
+        xi : `~np.ndarray`
+            Orbital phases of each observation defined on (-pi, pi)
+        omega : float
+            Single-scattering albedo as defined in
+        g : float
+            Scattering asymmetry factor, ranges from (-1, 1).
+
+        Returns
+        -------
+        phase_curve : `~kelp.PhaseCurve`
+            Flux ratio between the reflected planetary flux and the stellar flux in
+            units of ppm.
+        A_g : float
+            Geometric albedo derived for the planet given {omega, g}.
+        q : float
+            Integral phase function
+        """
+        reflected_light_ppm, A_g, q = reflected_phase_curve(
+            xi, omega, g, 1/self.rp_a
+        )
+        return PhaseCurve(xi, reflected_light_ppm), A_g, q
+
+    def phase_curve(self, xi,  omega, g, n_theta=20, n_phi=200, f=2 ** -0.5,
+                    cython=True, quad=False, check_sorted=True):
+        r"""
+        Reflected light phase curve for a homogeneous sphere by
+        Heng, Morris & Kitzmann (2021) with the thermal phase curve for a planet
+        represented with a spherical harmonic expansion by Morris et al.
+        (in prep).
+
+        Parameters
+        ----------
+        xi : `~np.ndarray`
+            Orbital phases of each observation defined on (-pi, pi)
+        omega : float
+            Single-scattering albedo as defined in
+        g : float
+            Scattering asymmetry factor, ranges from (-1, 1).
+        n_theta : int
+            Number of grid points in latitude
+        n_phi : int
+            Number of grid points in longitude
+        f : float
+            Greenhouse parameter (typically 1/sqrt(2)).
+
+        Returns
+        -------
+        phase_curve : `~kelp.PhaseCurve`
+            Flux ratio between the reflected planetary flux and the stellar flux in
+            units of ppm.
+        A_g : float
+            Geometric albedo derived for the planet given {omega, g}.
+        q : float
+            Integral phase function
+        """
+
+        reflected, A_g, q = self.reflected_phase_curve(
+            xi, omega, g
+        )
+
+        self.A_B = q * A_g
+
+        thermal = self.thermal_phase_curve(
+            xi, n_theta=n_theta, n_phi=n_phi, f=f, cython=cython, quad=quad,
+            check_sorted=check_sorted
+        )
+
+        return PhaseCurve(xi, thermal.flux + reflected.flux), A_g, q
+
+    def thermal_phase_curve(self, xi, n_theta=20, n_phi=200, f=2 ** -0.5,
+                            cython=True, quad=False, check_sorted=True):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
@@ -363,7 +533,7 @@ class Model(object):
 
         Returns
         -------
-        fluxes : `~numpy.ndarray`
+        phase_curve : `~kelp.PhaseCurve`
             System fluxes as a function of phase angle :math:`\xi`.
         """
         rp_rs2 = (self.rp_a * self.a_rs) ** 2
@@ -406,7 +576,7 @@ class Model(object):
                 f=f
             )
 
-        return PhaseCurve(xi, fluxes, channel=self.filt.name)
+        return PhaseCurve(xi, 1e6 * fluxes, channel=self.filt.name)
 
     def integrated_temperatures(self, n_theta=100, n_phi=100, f=2 ** -0.5):
         """

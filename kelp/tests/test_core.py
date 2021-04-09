@@ -17,7 +17,9 @@ from ..fast import bl_test, argmin_test
                           (0.5e-5, 1000)))
 def test_bl(wavelength, temp):
     kelp_test = bl_test(wavelength, temp)
-    check = BlackBody(temp * u.K, scale=1 * (u.W / (u.m ** 2 * u.nm * u.sr)))(wavelength * u.m)
+    check = BlackBody(
+        temp * u.K,  scale=1 * (u.W / (u.m ** 2 * u.nm * u.sr))
+    )(wavelength * u.m)
 
     np.testing.assert_allclose(check.si.value, kelp_test, rtol=1e-4)
 
@@ -46,9 +48,9 @@ def test_cython_temperature_map(alpha, omega_drag):
 
 
 @pytest.mark.parametrize("n_theta,n_phi,atol",
-                         ((10, 150, 1e-3),
-                          (20, 500, 3e-4),
-                          (50, 2000, 5e-5)))
+                         ((10, 150, 1000),
+                          (20, 500, 300),
+                          (50, 2000, 50)))
 def test_cython_phase_curve(n_theta, n_phi, atol):
     filt = Filter.from_name('IRAC 1')
     p = Planet.from_name('HD 189733')
@@ -60,8 +62,12 @@ def test_cython_phase_curve(n_theta, n_phi, atol):
     model = Model(0, 0.5, 20, 0, C_ml, lmax, planet=p, filt=filt)
 
     xi = np.linspace(-np.pi, np.pi, 50)
-    pc0 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=True, cython=False)
-    pc1 = model.phase_curve(xi, n_theta=n_theta, n_phi=n_phi, quad=False, cython=False)
+    pc0 = model.thermal_phase_curve(
+        xi, n_theta=n_theta, n_phi=n_phi, quad=True, cython=False
+    )
+    pc1 = model.thermal_phase_curve(
+        xi, n_theta=n_theta, n_phi=n_phi, quad=False, cython=False
+    )
 
     np.testing.assert_allclose(pc0.flux, pc1.flux, atol=atol)
 

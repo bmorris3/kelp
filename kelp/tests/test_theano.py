@@ -30,7 +30,7 @@ def test_cython_vs_theano():
     theta = np.linspace(0, np.pi, n_theta)
     theta2d, phi2d = np.meshgrid(theta, phi)
 
-    cython_phase_curve = m.phase_curve(xi, f=f).flux
+    cython_phase_curve = m.thermal_phase_curve(xi, f=f).flux
 
     with pm.Model():
         thermal_pc, T = thermal_phase_curve(
@@ -38,8 +38,8 @@ def test_cython_vs_theano():
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
         )
 
-        theano_phase_curve = xo.eval_in_model(thermal_pc)
+        theano_phase_curve = 1e6 * xo.eval_in_model(thermal_pc)
 
     np.testing.assert_allclose(
-        cython_phase_curve, theano_phase_curve, atol=1e-5
+        cython_phase_curve, theano_phase_curve, atol=5
     )
