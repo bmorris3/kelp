@@ -60,7 +60,7 @@ this example, which we will recover with optimization techniques:
     # Compute the phase curve of the exoplanet:
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi, f=f).flux
+    obs = model.thermal_phase_curve(xi, f=f).flux
 
     # Add random noise to the light curve:
     obs += obs_err * np.random.randn(xi.shape[0])
@@ -97,7 +97,7 @@ this example, which we will recover with optimization techniques:
     obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi, f=f).flux
+    obs = model.thermal_phase_curve(xi, f=f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
     errkwargs = dict(color='k', fmt='.', ecolor='silver')
@@ -124,7 +124,7 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x, f=f, check_sorted=False).flux
+        return model.thermal_phase_curve(x, f=f, check_sorted=False).flux
 
     def lnprior(p):
         """
@@ -226,7 +226,7 @@ measure the uncertainty on the maximum-likelihood parameters:
     obs_err = 1e-4
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi, f=f).flux
+    obs = model.thermal_phase_curve(xi, f=f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
     def pc_model(p, x):
@@ -239,7 +239,7 @@ measure the uncertainty on the maximum-likelihood parameters:
         model = Model(hotspot_offset=offset, alpha=alpha,
                       omega_drag=omega, A_B=A_B, C_ml=C, lmax=1,
                       planet=planet, filt=filt)
-        return model.phase_curve(x, f=f, check_sorted=False).flux
+        return model.thermal_phase_curve(x, f=f, check_sorted=False).flux
 
     def lnprior(p):
         """
@@ -362,7 +362,7 @@ the theano module:
     obs_err = 5e-5
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
-    obs = model.phase_curve(xi, f=true_f).flux
+    obs = model.thermal_phase_curve(xi, f=true_f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
 
@@ -391,7 +391,7 @@ the theano module:
             "f", mu=2**-0.5, sigma=0.1
         )
 
-        thermal_phase_curve, temperature_map, ps = theano.phase_curve(
+        thermal_phase_curve, temperature_map, ps = theano.thermal_phase_curve(
             xi.astype(floatX), delta_phi,
             omega, alpha, C_11, T_s, a_rs, rp_a, A_B,
             theta2d.astype(floatX), phi2d.astype(floatX),

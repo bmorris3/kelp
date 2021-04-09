@@ -120,13 +120,13 @@ and plot the temperature map using `~kelp.Model.temperature_map`:
     plt.show()
 
 and plot the phase curve that results from this temperature map using
-`~kelp.Model.phase_curve`:
+`~kelp.Model.thermal_phase_curve`:
 
 .. code-block:: python
 
     # Compute the phase curve:
     xi = np.linspace(-np.pi, np.pi, 50)
-    phase_curve = model.phase_curve(xi)
+    phase_curve = model.thermal_phase_curve(xi)
 
     # Plot the phase curve
     phase_curve.plot()
@@ -170,7 +170,7 @@ and plot the phase curve that results from this temperature map using
 
     # Compute the phase curve:
     xi = np.linspace(-np.pi, np.pi, 50)
-    phase_curve = model.phase_curve(xi)
+    phase_curve = model.thermal_phase_curve(xi)
 
     # Plot the phase curve
     phase_curve.plot()
