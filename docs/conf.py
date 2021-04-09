@@ -204,3 +204,8 @@ if on_rtd:
         os.system('./git-lfs install')  # make lfs available in current repository
         os.system('./git-lfs fetch')  # download content from remote
         os.system('./git-lfs checkout')  # make local files to have the real content on them
+
+intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
+intersphinx_mapping['lightkurve'] = ('https://docs.lightkurve.org/', None)
+intersphinx_mapping['exoplanet'] = ('https://docs.exoplanet.codes/en/stable/',
+                                    None)

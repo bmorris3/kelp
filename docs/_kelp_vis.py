@@ -30,7 +30,7 @@ if __name__ == '__main__':
                           planet=p, filt=filt)
                 T, theta, phi = m.temperature_map(n_theta, n_phi)
                 temperature_maps[..., i, j, k] = T.T
-                phase_curves[:, i, j, k] = m.phase_curve(xi).flux
+                phase_curves[:, i, j, k] = m.thermal_phase_curve(xi).flux
 
     condition = (phi <= 2 * np.pi) & (phi >= 0)
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
 
     class InteractiveKelpMap(param.Parameterized):
-        omega = param.ObjectSelector(default=omega_range[0], objects=omega_range)
+        omega = param.ObjectSelector(default=omega_range[-1], objects=omega_range)
 
         c11 = param.ObjectSelector(default=c11_range[0], objects=c11_range)
 
