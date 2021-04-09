@@ -18,7 +18,7 @@ from ..fast import bl_test, argmin_test
 def test_bl(wavelength, temp):
     kelp_test = bl_test(wavelength, temp)
     check = BlackBody(
-        temp * u.K,  scale=1 * (u.W / (u.m ** 2 * u.nm * u.sr))
+        temp * u.K, scale=1 * (u.W / (u.m ** 2 * u.nm * u.sr))
     )(wavelength * u.m)
 
     np.testing.assert_allclose(check.si.value, kelp_test, rtol=1e-4)

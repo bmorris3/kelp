@@ -415,8 +415,8 @@ def reflected_phase_curve(phases, omega, g, a_rp):
                    (1 + alpha_plus) / (1 - alpha_minus))
     Psi_S = 1 - 0.5 * (tt.cos(abs_alpha / 2) -
                        1.0 / tt.cos(abs_alpha / 2)) * Psi_0
-    Psi_L = (tt.sin(abs_alpha) + (np.pi - abs_alpha)
-             * tt.cos(abs_alpha)) / np.pi
+    Psi_L = (tt.sin(abs_alpha) + (np.pi - abs_alpha) *
+             tt.cos(abs_alpha)) / np.pi
     Psi_C = (-1 + 5 / 3 * tt.cos(abs_alpha / 2) ** 2 - 0.5 *
              tt.tan(abs_alpha / 2) * tt.sin(abs_alpha / 2) ** 3 * Psi_0)
 
@@ -471,11 +471,11 @@ def I(alpha, Phi):
     I_L = 1 / np.pi * (Phi * cos_alpha -
                        0.5 * tt.sin(alpha - 2 * Phi))
     I_C = -1 / (24 * cos_alpha_2) * (
-            -3 * tt.sin(alpha / 2 - Phi) +
-            tt.sin(3 * alpha / 2 - 3 * Phi) +
-            6 * tt.sin(3 * alpha / 2 - Phi) -
-            6 * tt.sin(alpha / 2 + Phi) +
-            24 * tt.sin(alpha / 2) ** 4 * I_0
+        -3 * tt.sin(alpha / 2 - Phi) +
+        tt.sin(3 * alpha / 2 - 3 * Phi) +
+        6 * tt.sin(3 * alpha / 2 - Phi) -
+        6 * tt.sin(alpha / 2 + Phi) +
+        24 * tt.sin(alpha / 2) ** 4 * I_0
     )
 
     return I_S, I_L, I_C
@@ -542,8 +542,8 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
                2 * x2))) +
            np.pi * omega_0 * Rho_C / 32 + 3 * np.pi * omega_prime *
            Rho_C_prime / 64 *
-           (2 / 3 + 3 / 8 * (tt.sin(x1) - tt.sin(x2)) + 1 / 24 * (
-                       tt.sin(3 * x1) - tt.sin(3 * x2))))
+           (2 / 3 + 3 / 8 * (tt.sin(x1) - tt.sin(x2)) +
+            1 / 24 * (tt.sin(3 * x1) - tt.sin(3 * x2))))
     C_3 = (16 * np.pi * A_g - 32 * C_1 - 2 * np.pi * omega_0 * C -
            np.pi * omega_prime * C_2 * C_prime
            ) / (2 * np.pi * omega_0 + np.pi * omega_prime * C_2)

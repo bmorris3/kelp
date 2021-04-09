@@ -150,8 +150,8 @@ def reflected_phase_curve(xi, omega, g, a_rp):
 
     Psi_S = 1 - 0.5 * (np.cos(abs_alpha / 2) -
                        1.0 / np.cos(abs_alpha / 2)) * Psi_0
-    Psi_L = (np.sin(abs_alpha) + (np.pi - abs_alpha)
-             * np.cos(abs_alpha)) / np.pi
+    Psi_L = (np.sin(abs_alpha) + (np.pi - abs_alpha) *
+             np.cos(abs_alpha)) / np.pi
     Psi_C = (-1 + 5 / 3 * np.cos(abs_alpha / 2) ** 2 - 0.5 *
              np.tan(abs_alpha / 2) * np.sin(abs_alpha / 2) ** 3 * Psi_0)
 
@@ -173,6 +173,7 @@ def reflected_phase_curve(xi, omega, g, a_rp):
     )
 
     return flux_ratio_ppm, A_g, q
+
 
 class Model(object):
     """
@@ -452,7 +453,7 @@ class Model(object):
         )
         return PhaseCurve(xi, reflected_light_ppm), A_g, q
 
-    def phase_curve(self, xi,  omega, g, n_theta=20, n_phi=200, f=2 ** -0.5,
+    def phase_curve(self, xi, omega, g, n_theta=20, n_phi=200, f=2 ** -0.5,
                     cython=True, quad=False, check_sorted=True):
         r"""
         Reflected light phase curve for a homogeneous sphere by
@@ -474,6 +475,15 @@ class Model(object):
             Number of grid points in longitude
         f : float
             Greenhouse parameter (typically 1/sqrt(2)).
+        cython : bool (default is True)
+            Use Cython implementation of the `integrated_blackbody` function
+            (deprecated). Default is True.
+        quad : bool (default is False)
+            Use `dblquad` to integrate the temperature map if True,
+            else use trapezoidal approximation.
+        check_sorted : bool (default is True)
+            Check that the ``xi`` values are sorted before passing to cython
+            (carefully turning this off will speed things up a bit)
 
         Returns
         -------
