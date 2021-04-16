@@ -460,10 +460,11 @@ def I(alpha, Phi):
     cos_alpha_2 = tt.cos(alpha / 2)
 
     z = tt.sin(alpha / 2 - Phi / 2) / tt.cos(Phi / 2)
+    z = tt.switch(tt.abs_(z) < 1, z, tt.sgn(z) * 0.99)
 
     # The following expression has the same behavior
-    # as I_0 = tt.arctanh(z), but it doesn't blow up at alpha=0
-    I_0 = tt.switch(tt.abs_(z) < 1, 0.5 * (tt.log1p(z) - tt.log1p(-z)), 0)
+    # as I_0 = 0.5 * (tt.log1p(z) - tt.log1p(-z)), but it may blow up at alpha=0
+    I_0 = tt.arctanh(z)
 
     I_S = (-1 / (2 * cos_alpha_2) *
            (tt.sin(alpha / 2 - Phi) +
