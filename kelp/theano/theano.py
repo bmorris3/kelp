@@ -270,7 +270,6 @@ def thermal_phase_curve(xi, hotspot_offset, omega_drag,
     filt_transmittance_tt = broadcaster()
     filt_transmittance_tt = filt_transmittance[None, None, None, :]
 
-    # Cython alternative to the pure python implementation:
     h_ml_sum = h_ml_sum_theano(hotspot_offset, omega_drag,
                                alpha, theta2d_tt, phi2d_tt, C_11)
     T_eq = f * T_s * tt.pow(a_rs, -half)
@@ -384,6 +383,8 @@ def reflected_phase_curve(phases, omega, g, a_rp):
         units of ppm.
     A_g : tensor-like
         Geometric albedo derived for the planet given {omega, g}.
+    q : tensor-like
+        Integral phase function
     """
     # Convert orbital phase on (0, 1) to "alpha" on (0, np.pi)
     alpha = (2 * np.pi * phases - np.pi).astype(floatX)

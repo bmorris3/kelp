@@ -86,7 +86,7 @@ def test_argmin(y, x):
 def test_integrated_temperatures():
 
     # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
-    f = 0.68
+    f = 0.67
 
     C_ml = [[0],
             [0, 0.18, 0]]
