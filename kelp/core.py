@@ -589,7 +589,13 @@ class Model(object):
 
     def integrated_temperatures(self, n_theta=100, n_phi=100, f=2 ** -0.5):
         """
-        Temperature map as a function of latitude (theta) and longitude (phi).
+        Compute the integrated dayside and nightside temperatures for the
+        temperature map.
+
+        .. note::
+            The dayside/nightside integrated temperatures reported by this
+            function are weighted by their emitted power, i.e. we take the
+            1/4 root of the mean of the temperature raised to the fourth power.
 
         Parameters
         ----------
@@ -628,12 +634,12 @@ class Model(object):
         ).T
 
         dayside_integrated_temperature = np.average(
-            T[:, dayside_hemisphere],
+            T[:, dayside_hemisphere] ** 4,
             weights=integrand_dayside[:, dayside_hemisphere]
-        )
+        ) ** (1/4)
         nightside_integrated_temperature = np.average(
-            T[:, nightside_hemisphere],
+            T[:, nightside_hemisphere] ** 4,
             weights=integrand_nightside[:, nightside_hemisphere]
-        )
+        ) ** (1/4)
 
         return dayside_integrated_temperature, nightside_integrated_temperature
