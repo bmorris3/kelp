@@ -10,7 +10,7 @@ from astropy.modeling.models import BlackBody
 from .fast import _h_ml_sum_cy, _integrated_blackbody, _phase_curve
 from .registries import PhaseCurve
 
-__all__ = ['Model']
+__all__ = ['Model', 'StellarSpectrum']
 
 
 def mu(theta):
@@ -182,7 +182,7 @@ class Model(object):
 
     def __init__(self, hotspot_offset=None, alpha=None, omega_drag=None,
                  A_B=None, C_ml=None, lmax=None, a_rs=None, rp_a=None, T_s=None,
-                 planet=None, filt=None):
+                 planet=None, filt=None, stellar_spectrum=None):
         r"""
         Parameters
         ----------
@@ -209,6 +209,9 @@ class Model(object):
             previous parameters
         filt : `~kelp.Filter`
             Filter of observations
+        stellar_spectrum : `~kelp.StellarSpectrum`
+            Stellar spectrum (if not supplied, assumes a Planck function at
+            temperature ``T_s``.)
         """
         self.hotspot_offset = hotspot_offset
         self.alpha = alpha
@@ -230,6 +233,11 @@ class Model(object):
         self.rp_a = rp_a
         self.a_rs = a_rs
         self.T_s = T_s
+
+        if stellar_spectrum is not None:
+            self.stellar_spectrum = stellar_spectrum
+        else:
+            self.stellar_spectrum = StellarSpectrum.from_zeros()
 
     def tilda_mu(self, theta):
         r"""
@@ -500,8 +508,6 @@ class Model(object):
             xi, omega, g
         )
 
-        self.A_B = q * A_g
-
         thermal = self.thermal_phase_curve(
             xi, n_theta=n_theta, n_phi=n_phi, f=f, cython=cython, quad=quad,
             check_sorted=check_sorted
@@ -575,14 +581,17 @@ class Model(object):
                     raise ValueError("xi array must be sorted")
 
             fluxes = _phase_curve(
-                xi.astype(np.float64), self.hotspot_offset,
+                xi.astype(np.float64),
+                self.hotspot_offset,
                 self.omega_drag,
                 self.alpha, self.C_ml, self.lmax,
                 self.T_s, self.a_rs, self.rp_a,
                 self.A_B, n_theta, n_phi,
                 self.filt.wavelength.to(u.m).value,
                 self.filt.transmittance,
-                f=f
+                f,
+                self.stellar_spectrum.wavelength.to(u.m).value,
+                self.stellar_spectrum.spectral_flux_density.to(u.W/u.m**3)
             )
 
         return PhaseCurve(xi, 1e6 * fluxes, channel=self.filt.name)
@@ -643,3 +652,29 @@ class Model(object):
         ) ** (1/4)
 
         return dayside_integrated_temperature, nightside_integrated_temperature
+
+
+class StellarSpectrum(object):
+    def __init__(self, wavelength, spectral_flux_density):
+        """
+        Parameters
+        ----------
+        wavelength : `~astropy.units.Quantity`
+            Wavelength array for stellar spectrum
+        spectral_flux_density : `~astropy.units.Quantity`
+            Spectral flux density as a function of wavelength. Should have units
+            compatible with W/m^2/micron, for example.
+        """
+        self.wavelength = wavelength
+        self.spectral_flux_density = spectral_flux_density
+
+    @classmethod
+    def from_zeros(cls, size=10):
+        """
+        Construct a stellar spectrum with all zeros as the wavelength and
+        spectrum arrays.
+
+        This effectively turns off the custom stellar spectrum
+        feature.
+        """
+        return cls(np.zeros(size) * u.m, np.zeros(size) * u.W/u.m**3)
