@@ -421,7 +421,9 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                  float alpha, list C_ml,
                  int lmax, float T_s, float a_rs, float rp_a, float A_B,
                  int n_theta, int n_phi, double [:] filt_wavelength,
-                 double [:] filt_transmittance, float f=2**-0.5):
+                 double [:] filt_transmittance, float f,
+                 double [:] stellar_spectrum_wavelength,
+                 double [:] stellar_spectrum_spectral_flux_density):
     """
     Compute the phase curve evaluated at phases `xi`.
     """
@@ -435,6 +437,18 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef np.ndarray[DTYPE_t, ndim=2] phi2d = np.zeros((n_theta, n_phi), dtype=DTYPE)
 
     theta2d, phi2d = np.meshgrid(theta, phi)
+
+    # If stellar spectrum is supplied, interpolate it into the same wavelength
+    # grid as the filter bandpass, otherwise assume it is a Planck function.
+    cdef np.ndarray[DTYPE_t, ndim=1] stellar_spectrum = blackbody(
+        filt_wavelength, T_s
+    )
+
+    if np.count_nonzero(stellar_spectrum_spectral_flux_density) > 0:
+         stellar_spectrum = np.interp(
+            filt_wavelength, stellar_spectrum_wavelength,
+            stellar_spectrum_spectral_flux_density
+        )
 
     cdef double [::1] fluxes_view = fluxes
 
@@ -457,7 +471,7 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef double [:] xi_view = xi
 
     cdef DTYPE_t planck_star = trapz(filt_transmittance *
-                                     blackbody(filt_wavelength, T_s),
+                                     stellar_spectrum,
                                      filt_wavelength)
 
     for k in range(n_xi):
