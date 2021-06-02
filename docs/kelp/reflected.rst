@@ -220,7 +220,7 @@ jump straight into in-line comments:
         hml_f = (2/3 - hml_eps * 5 / 12) ** 0.25
         delta_phi = 0
 
-        A_B = pm.Deterministic('A_B', q * A_g)
+        A_B = 0.5
 
         # Compute the thermal phase curve with zero phase offset
         thermal, T = thermal_phase_curve(
@@ -444,7 +444,7 @@ Let's finally plot the final results:
         hml_f = (2/3 - hml_eps * 5 / 12) ** 0.25
         delta_phi = 0
 
-        A_B = pm.Deterministic('A_B', q * A_g)
+        A_B = 0.5
 
         # Compute the thermal phase curve with zero phase offset
         thermal, T = thermal_phase_curve(
