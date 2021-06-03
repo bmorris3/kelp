@@ -50,24 +50,24 @@ In the Cython implementation of kelp, the above looks like this:
 
     >>> # Compute the integrated dayside and nightside temperatures:
     >>> integrand_dayside = np.max(
-    >>>     [np.sin(theta2d) ** 2 * np.cos(phi2d),
-    >>>      np.zeros_like(theta2d)],
-    >>>     axis=0
-    >>> )
+    ...     [np.sin(theta2d) ** 2 * np.cos(phi2d),
+    ...      np.zeros_like(theta2d)],
+    ...     axis=0
+    ... )
     >>> integrand_nightside = np.max(
-    >>>     [np.sin(theta2d) ** 2 * np.cos(phi2d + np.pi),
-    >>>      np.zeros_like(theta2d)],
-    >>>     axis=0
-    >>> )
+    ...     [np.sin(theta2d) ** 2 * np.cos(phi2d + np.pi),
+    ...      np.zeros_like(theta2d)],
+    ...     axis=0
+    ... )
 
     >>> dayside = np.sum(integrand_dayside * temp_map) / np.sum(integrand_dayside)
     >>> nightside = np.sum(integrand_nightside * temp_map) / np.sum(integrand_nightside)
 
     >>> # Compute the Bond albedo, heat redistribution and Greenhouse parameter:
     >>> A_B = (
-    >>>     p.T_s**4 - p.a**2 *
-    >>>     (3 * dayside**4 + 5*nightside**4) / 2
-    >>> ) / p.T_s**4
+    ...     p.T_s**4 - p.a**2 *
+    ...     (3 * dayside**4 + 5*nightside**4) / 2
+    ... ) / p.T_s**4
     >>>
     >>> epsilon = 8 * nightside**4 / (3 * dayside**4 + 5 * nightside**4)
     >>> f = (2/3 - epsilon * 5 / 12) ** 0.25
