@@ -19,6 +19,7 @@ package written in Python. The source code is available on
   kelp/interactive.rst
   kelp/optimization.rst
   kelp/reflected.rst
+  kelp/albedo_redistribution.rst
   kelp/index.rst
 
 
