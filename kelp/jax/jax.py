@@ -1,6 +1,8 @@
 import numpy as np
 from numpy import pi as pi64
 from jax import numpy as jnp
+from jax.config import config
+config.update('jax_enable_x64', True)
 
 __all__ = [
     'thermal_phase_curve',
@@ -412,7 +414,7 @@ def reflected_phase_curve(phases, omega, g, a_rp):
                 (1 + alpha_plus) / (1 - alpha_minus)),
         0
     )
-    print('Psi_0', Psi_0)
+
     Psi_S = 1 - 0.5 * (jnp.cos(abs_alpha / 2) -
                        1.0 / jnp.cos(abs_alpha / 2)) * Psi_0
     Psi_L = (jnp.sin(abs_alpha) + (np.pi - abs_alpha) *
