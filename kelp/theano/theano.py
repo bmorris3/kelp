@@ -557,7 +557,7 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
 
 
 def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
-                                        A_g, a_rp, return_q=False):
+                                        A_g, a_rp, return_q=True):
     """
     Reflected light phase curve for an inhomogeneous sphere by
     Heng, Morris & Kitzmann (2021), with inspiration from Hu et al. (2015).
