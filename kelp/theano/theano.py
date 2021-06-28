@@ -360,7 +360,7 @@ def trapz2d(z, x, y):
     return dx * dy * (s1 + two * s2 + (two + two) * s3) / (two + two)
 
 
-def reflected_phase_curve(phases, omega, g, a_rp, return_q=False):
+def reflected_phase_curve(phases, omega, g, a_rp, return_q=True):
     """
     Reflected light phase curve for a homogeneous sphere by
     Heng, Morris & Kitzmann (2021).
