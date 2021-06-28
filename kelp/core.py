@@ -7,7 +7,6 @@ from scipy.interpolate import RectBivariateSpline
 import astropy.units as u
 from astropy.modeling.models import BlackBody
 
-from .fast import _h_ml_sum_cy, _integrated_blackbody, _phase_curve
 from .registries import PhaseCurve
 
 __all__ = ['Model']
@@ -349,6 +348,8 @@ class Model(object):
         phi : `~np.ndarray`
             Longitudes over which temperature map is computed
         """
+        from .fast import _h_ml_sum_cy
+
         phase_offset = np.pi / 2
         phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
         theta = np.linspace(0, np.pi, n_theta)
@@ -395,6 +396,7 @@ class Model(object):
             Interpolation function for the blackbody map as a function of
             latitude (theta) and longitude (phi)
         """
+        from .fast import _integrated_blackbody
 
         if cython:
             int_bb, func = _integrated_blackbody(self.hotspot_offset,
@@ -545,6 +547,8 @@ class Model(object):
         phase_curve : `~kelp.PhaseCurve`
             System fluxes as a function of phase angle :math:`\xi`.
         """
+        from .fast import _phase_curve
+
         rp_rs2 = (self.rp_a * self.a_rs) ** 2
 
         if quad:

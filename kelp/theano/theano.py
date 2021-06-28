@@ -361,7 +361,7 @@ def trapz2d(z, x, y):
     return dx * dy * (s1 + two * s2 + (two + two) * s3) / (two + two)
 
 
-def reflected_phase_curve(phases, omega, g, a_rp):
+def reflected_phase_curve(phases, omega, g, a_rp, return_q=False):
     """
     Reflected light phase curve for a homogeneous sphere by
     Heng, Morris & Kitzmann (2021).
@@ -430,11 +430,14 @@ def reflected_phase_curve(phases, omega, g, a_rp):
 
     flux_ratio_ppm = 1e6 * (a_rp ** -2 * A_g * Psi)
 
-    q = _integral_phase_function(
-        Psi, sin_abs_sort_alpha, sort_alpha, alpha_sort_order
-    )
+    if return_q:
+        q = _integral_phase_function(
+            Psi, sin_abs_sort_alpha, sort_alpha, alpha_sort_order
+        )
 
-    return flux_ratio_ppm, A_g, q
+        return flux_ratio_ppm, A_g, q
+    else:
+        return flux_ratio_ppm, A_g
 
 
 def rho(omega, P_0, P_star):
@@ -553,7 +556,7 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
 
 
 def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
-                                        A_g, a_rp):
+                                        A_g, a_rp, return_q=False):
     """
     Reflected light phase curve for an inhomogeneous sphere by
     Heng, Morris & Kitzmann (2021), with inspiration from Hu et al. (2015).
@@ -592,9 +595,7 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
     # Redefine alpha to be on (-pi, pi)
     alpha = (2 * np.pi * phases - np.pi).astype(floatX)
     abs_alpha = np.abs(alpha).astype(floatX)
-    alpha_sort_order = np.argsort(alpha)
-    sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order]).astype(floatX)
-    sort_alpha = alpha[alpha_sort_order].astype(floatX)
+
 
     # Equation 34 for Henyey-Greestein
     P_star = (1 - g ** 2) / (1 + g ** 2 +
@@ -729,9 +730,16 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
 
     flux_ratio_ppm = 1e6 * a_rp**-2 * Psi * A_g
 
-    q = _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha,
-                                 alpha_sort_order)
+    if return_q:
+        alpha_sort_order = np.argsort(alpha)
+        sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order]).astype(floatX)
+        sort_alpha = alpha[alpha_sort_order].astype(floatX)
 
-    # F_0 = F_S_alpha0 + F_L_alpha0 + F_C_alpha0
+        q = _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha,
+                                     alpha_sort_order)
 
-    return flux_ratio_ppm, g, q
+        # F_0 = F_S_alpha0 + F_L_alpha0 + F_C_alpha0
+
+        return flux_ratio_ppm, g, q
+    else:
+        return flux_ratio_ppm, g
