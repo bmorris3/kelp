@@ -383,11 +383,11 @@ def reflected_phase_curve(phases, omega, g, a_rp):
         Integral phase function
     """
     # Convert orbital phase on (0, 1) to "alpha" on (0, np.pi)
-    alpha = jnp.asarray(2 * np.pi * phases - np.pi)#.astype(floatX)
-    abs_alpha = jnp.abs(alpha)#.astype(floatX)
+    alpha = jnp.asarray(2 * np.pi * phases - np.pi)
+    abs_alpha = jnp.abs(alpha)
     alpha_sort_order = jnp.argsort(alpha)
-    sin_abs_sort_alpha = jnp.sin(abs_alpha[alpha_sort_order])#.astype(floatX)
-    sort_alpha = alpha[alpha_sort_order]#.astype(floatX)
+    sin_abs_sort_alpha = jnp.sin(abs_alpha[alpha_sort_order])
+    sort_alpha = alpha[alpha_sort_order]
 
     gamma = jnp.sqrt(1 - omega)
     eps = (1 - gamma) / (1 + gamma)

@@ -14,6 +14,7 @@ from ..theano import (
     thermal_phase_curve as therm_theano
 )
 
+
 @pytest.mark.parametrize("omega, delta_phi",
                          ((0.3, 0),
                           (0.1, -0.1),
@@ -22,7 +23,7 @@ def test_jax_vs_theano_reflected(omega, delta_phi):
     args = (np.linspace(0, 1, 100), omega, delta_phi, 100)
     jax_pc = refl_jax(*args)[0]
 
-    with pm.Model() as model:
+    with pm.Model():
         theano_pc = pmx.eval_in_model(refl_theano(*args)[0])
 
     np.testing.assert_allclose(jax_pc, theano_pc)

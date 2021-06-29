@@ -597,7 +597,6 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
     alpha = (2 * np.pi * phases - np.pi).astype(floatX)
     abs_alpha = np.abs(alpha).astype(floatX)
 
-
     # Equation 34 for Henyey-Greestein
     P_star = (1 - g ** 2) / (1 + g ** 2 +
                              2 * g * tt.cos(abs_alpha)) ** 1.5
