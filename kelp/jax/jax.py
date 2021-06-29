@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import pi as pi64
-import theano.tensor as tt
-from theano import config
+from jax import numpy as jnp
+from jax.config import config
+config.update('jax_enable_x64', True)
 
 __all__ = [
     'thermal_phase_curve',
@@ -9,7 +10,7 @@ __all__ = [
     'reflected_phase_curve_inhomogeneous'
 ]
 
-floatX = config.floatX
+floatX = 'float32'
 pi = np.cast[floatX](pi64)
 
 h = np.cast[floatX](6.62607015e-34)  # J s
@@ -25,7 +26,7 @@ half = np.cast[floatX](0.5)
 
 def linspace(start, stop, n):
     dx = (stop - start) / (n - 1)
-    return tt.arange(start, stop + dx, dx, dtype=floatX)
+    return jnp.arange(start, stop + dx, dx, dtype=floatX)
 
 
 def mu(theta):
@@ -37,7 +38,7 @@ def mu(theta):
     theta : `~numpy.ndarray`
         Angle :math:`\theta`
     """
-    return tt.cos(theta)
+    return jnp.cos(theta)
 
 
 def tilda_mu(theta, alpha):
@@ -110,16 +111,16 @@ def h_ml(omega_drag, alpha, theta, phi, C_11, m=one, l=one):
         :math:`h_{m\ell}` basis function.
     """
     prefactor = (C_11 /
-                 (tt.pow(omega_drag, two) *
-                  tt.pow(alpha, two * two) +
-                  tt.pow(m, two)) *
-                 tt.exp(-tt.pow(tilda_mu(theta, alpha), two) * half))
+                 (jnp.power(omega_drag, two) *
+                  jnp.power(alpha, two * two) +
+                  jnp.power(m, two)) *
+                 jnp.exp(-jnp.power(tilda_mu(theta, alpha), two) * half))
 
-    result = prefactor * (mu(theta) * m * H(l, theta, alpha) * tt.cos(m * phi) +
+    result = prefactor * (mu(theta) * m * H(l, theta, alpha) * jnp.cos(m * phi) +
                           alpha * omega_drag * (tilda_mu(theta, alpha) *
                                                 H(l, theta, alpha) -
                                                 H(l + one, theta, alpha)) *
-                          tt.sin(m * phi))
+                          jnp.sin(m * phi))
     return result
 
 
@@ -145,8 +146,8 @@ def blackbody_lambda(lam, temperature):
     """
     Compute the blackbody flux as a function of wavelength `lam` in mks units
     """
-    return (two * hc2 / tt.pow(lam, 5) /
-            tt.expm1(h * c / (lam * k_B * temperature)))
+    return (two * hc2 / jnp.power(lam, 5) /
+            jnp.expm1(h * c / (lam * k_B * temperature)))
 
 
 def blackbody2d(wavelengths, temperature):
@@ -175,7 +176,7 @@ def trapz3d(y_3d, x):
     Trapezoid rule in ~more dimensions~
     """
     s = half * ((x[..., 1:] - x[..., :-1]) * (y_3d[..., 1:] + y_3d[..., :-1]))
-    return tt.sum(s, axis=-1)
+    return jnp.sum(s, axis=-1)
 
 
 def integrate_planck(filt_wavelength, filt_trans,
@@ -194,7 +195,7 @@ def integrate_planck(filt_wavelength, filt_trans,
     return int_bb_num
 
 
-broadcaster = tt.TensorType(floatX, 4 * [True, ])
+# broadcaster = jnp.TensorType(floatX, 4 * [True, ])
 
 
 def thermal_phase_curve(xi, hotspot_offset, omega_drag,
@@ -259,22 +260,17 @@ def thermal_phase_curve(xi, hotspot_offset, omega_drag,
     >>> theta2d, phi2d = np.meshgrid(theta, phi)
     """
     # Handle broadcasting for 4D tensors
-    xi_tt = broadcaster()
     xi_tt = xi[None, None, :, None]
-    theta2d_tt = broadcaster()
     theta2d_tt = theta2d[..., None, None]
-    phi2d_tt = broadcaster()
     phi2d_tt = phi2d[..., None, None]
-    filt_wavelength_tt = broadcaster()
     filt_wavelength_tt = filt_wavelength[None, None, None, :]
-    filt_transmittance_tt = broadcaster()
     filt_transmittance_tt = filt_transmittance[None, None, None, :]
 
     h_ml_sum = h_ml_sum_theano(hotspot_offset, omega_drag,
                                alpha, theta2d_tt, phi2d_tt, C_11)
-    T_eq = f * T_s * tt.pow(a_rs, -half)
+    T_eq = f * T_s * jnp.power(a_rs, -half)
 
-    T = T_eq * tt.pow(one - A_B, half * half) * (one + h_ml_sum)
+    T = T_eq * jnp.power(one - A_B, half * half) * (one + h_ml_sum)
 
     rp_rs = rp_a * a_rs
     int_bb = integrate_planck(filt_wavelength_tt,
@@ -295,7 +291,7 @@ def thermal_phase_curve(xi, hotspot_offset, omega_drag,
                        phi2d_tt[:, 0, 0, 0],
                        theta2d_tt[0, :, 0, 0])
 
-    fluxes = integral * tt.pow(rp_rs, 2) / pi / planck_star
+    fluxes = integral * jnp.power(rp_rs, 2) / pi / planck_star
     return fluxes, T
 
 
@@ -303,28 +299,28 @@ def sum2d(z):
     """
     Sum a 2d array over its axes
     """
-    return tt.sum(z)
+    return jnp.sum(z)
 
 
 def sum1d(z):
     """
     Sum a 1d array over its first axis
     """
-    return tt.sum(z)
+    return jnp.sum(z)
 
 
 def sinsq_2d(z):
     """
     The square of the sine of a 2d array
     """
-    return tt.pow(tt.sin(z), 2)
+    return jnp.power(jnp.sin(z), 2)
 
 
 def cos_2d(z):
     """
     The cosine of a 2d array
     """
-    return tt.cos(z)
+    return jnp.cos(z)
 
 
 def trapz2d(z, x, y):
@@ -353,14 +349,14 @@ def trapz2d(z, x, y):
     dy = y[1] - y[0]
 
     s1 = z[0, 0, :] + z[m, 0, :] + z[0, n, :] + z[m, n, :]
-    s2 = (tt.sum(z[1:m, 0, :], axis=0) + tt.sum(z[1:m, n, :], axis=0) +
-          tt.sum(z[0, 1:n, :], axis=0) + tt.sum(z[m, 1:n, :], axis=0))
-    s3 = tt.sum(tt.sum(z[1:m, 1:n, :], axis=0), axis=0)
+    s2 = (jnp.sum(z[1:m, 0, :], axis=0) + jnp.sum(z[1:m, n, :], axis=0) +
+          jnp.sum(z[0, 1:n, :], axis=0) + jnp.sum(z[m, 1:n, :], axis=0))
+    s3 = jnp.sum(jnp.sum(z[1:m, 1:n, :], axis=0), axis=0)
 
     return dx * dy * (s1 + two * s2 + (two + two) * s3) / (two + two)
 
 
-def reflected_phase_curve(phases, omega, g, a_rp, return_q=True):
+def reflected_phase_curve(phases, omega, g, a_rp):
     """
     Reflected light phase curve for a homogeneous sphere by
     Heng, Morris & Kitzmann (2021).
@@ -387,18 +383,18 @@ def reflected_phase_curve(phases, omega, g, a_rp, return_q=True):
         Integral phase function
     """
     # Convert orbital phase on (0, 1) to "alpha" on (0, np.pi)
-    alpha = (2 * np.pi * phases - np.pi).astype(floatX)
-    abs_alpha = np.abs(alpha).astype(floatX)
-    alpha_sort_order = np.argsort(alpha)
-    sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order]).astype(floatX)
-    sort_alpha = alpha[alpha_sort_order].astype(floatX)
+    alpha = jnp.asarray(2 * np.pi * phases - np.pi)
+    abs_alpha = jnp.abs(alpha)
+    alpha_sort_order = jnp.argsort(alpha)
+    sin_abs_sort_alpha = jnp.sin(abs_alpha[alpha_sort_order])
+    sort_alpha = alpha[alpha_sort_order]
 
-    gamma = tt.sqrt(1 - omega)
+    gamma = jnp.sqrt(1 - omega)
     eps = (1 - gamma) / (1 + gamma)
 
     # Equation 34 for Henyey-Greestein
     P_star = (1 - g ** 2) / (1 + g ** 2 +
-                             2 * g * tt.cos(alpha)) ** 1.5
+                             2 * g * jnp.cos(alpha)) ** 1.5
     # Equation 36
     P_0 = (1 - g) / (1 + g) ** 2
 
@@ -408,18 +404,23 @@ def reflected_phase_curve(phases, omega, g, a_rp, return_q=True):
     Rho_L = 0.5 * eps * (2 - eps) * (1 + eps) ** 2
     Rho_C = eps ** 2 * (1 + eps) ** 2
 
-    alpha_plus = tt.sin(abs_alpha / 2) + tt.cos(abs_alpha / 2)
-    alpha_minus = tt.sin(abs_alpha / 2) - tt.cos(abs_alpha / 2)
+    alpha_plus = jnp.sin(abs_alpha / 2) + jnp.cos(abs_alpha / 2)
+    alpha_minus = jnp.sin(abs_alpha / 2) - jnp.cos(abs_alpha / 2)
 
     # Equation 11:
-    Psi_0 = tt.log((1 + alpha_minus) * (alpha_plus - 1) /
-                   (1 + alpha_plus) / (1 - alpha_minus))
-    Psi_S = 1 - 0.5 * (tt.cos(abs_alpha / 2) -
-                       1.0 / tt.cos(abs_alpha / 2)) * Psi_0
-    Psi_L = (tt.sin(abs_alpha) + (np.pi - abs_alpha) *
-             tt.cos(abs_alpha)) / np.pi
-    Psi_C = (-1 + 5 / 3 * tt.cos(abs_alpha / 2) ** 2 - 0.5 *
-             tt.tan(abs_alpha / 2) * tt.sin(abs_alpha / 2) ** 3 * Psi_0)
+    Psi_0 = jnp.where(
+        (alpha_plus > -1) & (alpha_minus < 1),
+        jnp.log((1 + alpha_minus) * (alpha_plus - 1) /
+                (1 + alpha_plus) / (1 - alpha_minus)),
+        0
+    )
+
+    Psi_S = 1 - 0.5 * (jnp.cos(abs_alpha / 2) -
+                       1.0 / jnp.cos(abs_alpha / 2)) * Psi_0
+    Psi_L = (jnp.sin(abs_alpha) + (np.pi - abs_alpha) *
+             jnp.cos(abs_alpha)) / np.pi
+    Psi_C = (-1 + 5 / 3 * jnp.cos(abs_alpha / 2) ** 2 - 0.5 *
+             jnp.tan(abs_alpha / 2) * jnp.sin(abs_alpha / 2) ** 3 * Psi_0)
 
     # Equation 8:
     A_g = omega / 8 * (P_0 - 1) + eps / 2 + eps ** 2 / 6 + eps ** 3 / 24
@@ -431,21 +432,18 @@ def reflected_phase_curve(phases, omega, g, a_rp, return_q=True):
 
     flux_ratio_ppm = 1e6 * (a_rp ** -2 * A_g * Psi)
 
-    if return_q:
-        q = _integral_phase_function(
-            Psi, sin_abs_sort_alpha, sort_alpha, alpha_sort_order
-        )
+    q = _integral_phase_function(
+        Psi, sin_abs_sort_alpha, sort_alpha, alpha_sort_order
+    )
 
-        return flux_ratio_ppm, A_g, q
-    else:
-        return flux_ratio_ppm, A_g
+    return flux_ratio_ppm, A_g, q
 
 
 def rho(omega, P_0, P_star):
     """
     Equation 10
     """
-    gamma = tt.sqrt(1 - omega)
+    gamma = jnp.sqrt(1 - omega)
     eps = (1 - gamma) / (1 + gamma)
 
     Rho_S = P_star - 1 + 0.25 * ((1 + eps) * (2 - eps)) ** 2
@@ -460,27 +458,26 @@ def I(alpha, Phi):
     """
     Equation 39
     """
-    cos_alpha = tt.cos(alpha)
-    cos_alpha_2 = tt.cos(alpha / 2)
+    cos_alpha = jnp.cos(alpha)
+    cos_alpha_2 = jnp.cos(alpha / 2)
 
-    z = tt.sin(alpha / 2 - Phi / 2) / tt.cos(Phi / 2)
-    z = tt.switch(tt.abs_(z) < 1, z, tt.sgn(z) * 0.99)
+    z = jnp.sin(alpha / 2 - Phi / 2) / jnp.cos(Phi / 2)
 
     # The following expression has the same behavior
-    # as I_0 = 0.5 * (tt.log1p(z) - tt.log1p(-z)), but it may blow up at alpha=0
-    I_0 = tt.arctanh(z)
+    # as I_0 = jnp.arctanh(z), but it doesn't blow up at alpha=0
+    I_0 = jnp.where(jnp.abs(z) < 1.0, 0.5 * (jnp.log1p(z) - jnp.log1p(-z)), 0)
 
     I_S = (-1 / (2 * cos_alpha_2) *
-           (tt.sin(alpha / 2 - Phi) +
+           (jnp.sin(alpha / 2 - Phi) +
             (cos_alpha - 1) * I_0))
     I_L = 1 / np.pi * (Phi * cos_alpha -
-                       0.5 * tt.sin(alpha - 2 * Phi))
+                       0.5 * jnp.sin(alpha - 2 * Phi))
     I_C = -1 / (24 * cos_alpha_2) * (
-        -3 * tt.sin(alpha / 2 - Phi) +
-        tt.sin(3 * alpha / 2 - 3 * Phi) +
-        6 * tt.sin(3 * alpha / 2 - Phi) -
-        6 * tt.sin(alpha / 2 + Phi) +
-        24 * tt.sin(alpha / 2) ** 4 * I_0
+        -3 * jnp.sin(alpha / 2 - Phi) +
+        jnp.sin(3 * alpha / 2 - 3 * Phi) +
+        6 * jnp.sin(3 * alpha / 2 - Phi) -
+        6 * jnp.sin(alpha / 2 + Phi) +
+        24 * jnp.sin(alpha / 2) ** 4 * I_0
     )
 
     return I_S, I_L, I_C
@@ -491,7 +488,7 @@ def trapz1d(y_1d, x):
     Trapezoid rule in one dimension. This only works if x is increasing.
     """
     s = 0.5 * ((x[1:] - x[:-1]) * (y_1d[1:] + y_1d[:-1]))
-    return tt.sum(s, axis=-1)
+    return jnp.sum(s, axis=-1)
 
 
 def _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha, sort):
@@ -528,10 +525,10 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
     g : tensor-like
         Scattering asymmetry factor
     """
-    gamma = tt.sqrt(1 - omega_0)
+    gamma = jnp.sqrt(1 - omega_0)
     eps = (1 - gamma) / (1 + gamma)
 
-    gamma_prime = tt.sqrt(1 - omega_prime)
+    gamma_prime = jnp.sqrt(1 - omega_prime)
     eps_prime = (1 - gamma_prime) / (1 + gamma_prime)
 
     Rho_L = eps / 2 * (1 + eps) ** 2 * (2 - eps)
@@ -541,23 +538,23 @@ def _g_from_ag(A_g, omega_0, omega_prime, x1, x2):
     C = -1 + 0.25 * (1 + eps) ** 2 * (2 - eps) ** 2
     C_prime = -1 + 0.25 * (1 + eps_prime) ** 2 * (2 - eps_prime) ** 2
 
-    C_2 = 2 + tt.sin(x1) - tt.sin(x2)
+    C_2 = 2 + jnp.sin(x1) - jnp.sin(x2)
     C_1 = (omega_0 * Rho_L * np.pi / 12 + omega_prime * Rho_L_prime / 12 *
-           (x1 - x2 + np.pi + 0.5 * (tt.sin(2 * x1) - tt.sin(
+           (x1 - x2 + np.pi + 0.5 * (jnp.sin(2 * x1) - jnp.sin(
                2 * x2))) +
            np.pi * omega_0 * Rho_C / 32 + 3 * np.pi * omega_prime *
            Rho_C_prime / 64 *
-           (2 / 3 + 3 / 8 * (tt.sin(x1) - tt.sin(x2)) +
-            1 / 24 * (tt.sin(3 * x1) - tt.sin(3 * x2))))
+           (2 / 3 + 3 / 8 * (jnp.sin(x1) - jnp.sin(x2)) +
+            1 / 24 * (jnp.sin(3 * x1) - jnp.sin(3 * x2))))
     C_3 = (16 * np.pi * A_g - 32 * C_1 - 2 * np.pi * omega_0 * C -
            np.pi * omega_prime * C_2 * C_prime
            ) / (2 * np.pi * omega_0 + np.pi * omega_prime * C_2)
 
-    return - ((2 * C_3 + 1) - tt.sqrt(1 + 8 * C_3)) / (2 * C_3)
+    return - ((2 * C_3 + 1) - jnp.sqrt(1 + 8 * C_3)) / (2 * C_3)
 
 
 def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
-                                        A_g, a_rp, return_q=True):
+                                        A_g, a_rp):
     """
     Reflected light phase curve for an inhomogeneous sphere by
     Heng, Morris & Kitzmann (2021), with inspiration from Hu et al. (2015).
@@ -596,10 +593,13 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
     # Redefine alpha to be on (-pi, pi)
     alpha = (2 * np.pi * phases - np.pi).astype(floatX)
     abs_alpha = np.abs(alpha).astype(floatX)
+    alpha_sort_order = np.argsort(alpha)
+    sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order]).astype(floatX)
+    sort_alpha = alpha[alpha_sort_order].astype(floatX)
 
     # Equation 34 for Henyey-Greestein
     P_star = (1 - g ** 2) / (1 + g ** 2 +
-                             2 * g * tt.cos(abs_alpha)) ** 1.5
+                             2 * g * jnp.cos(abs_alpha)) ** 1.5
     # Equation 36
     P_0 = (1 - g) / (1 + g) ** 2
 
@@ -609,20 +609,23 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
         omega_prime, P_0, P_star
     )
 
-    alpha_plus = tt.sin(abs_alpha / 2) + tt.cos(abs_alpha / 2)
-    alpha_minus = tt.sin(abs_alpha / 2) - tt.cos(abs_alpha / 2)
+    alpha_plus = jnp.sin(abs_alpha / 2) + jnp.cos(abs_alpha / 2)
+    alpha_minus = jnp.sin(abs_alpha / 2) - jnp.cos(abs_alpha / 2)
 
     # Equation 11:
-    Psi_0 = tt.log((1 + alpha_minus) * (alpha_plus - 1) /
-                   (1 + alpha_plus) / (1 - alpha_minus))
-
-    Psi_S = 1 - 0.5 * (tt.cos(abs_alpha / 2) -
-                       1.0 / tt.cos(abs_alpha / 2)) * Psi_0
-    Psi_L = (tt.sin(abs_alpha) + (np.pi - abs_alpha) *
-             tt.cos(abs_alpha)) / np.pi
-    Psi_C = (-1 + 5 / 3 * tt.cos(abs_alpha / 2) ** 2 -
-             0.5 * tt.tan(abs_alpha / 2) *
-             tt.sin(abs_alpha / 2) ** 3 * Psi_0)
+    Psi_0 = jnp.where(
+        (alpha_plus > -1) & (alpha_minus < 1),
+        jnp.log((1 + alpha_minus) * (alpha_plus - 1) /
+                (1 + alpha_plus) / (1 - alpha_minus)),
+        0
+    )
+    Psi_S = 1 - 0.5 * (jnp.cos(abs_alpha / 2) -
+                       1.0 / jnp.cos(abs_alpha / 2)) * Psi_0
+    Psi_L = (jnp.sin(abs_alpha) + (np.pi - abs_alpha) *
+             jnp.cos(abs_alpha)) / np.pi
+    Psi_C = (-1 + 5 / 3 * jnp.cos(abs_alpha / 2) ** 2 -
+             0.5 * jnp.tan(abs_alpha / 2) *
+             jnp.sin(abs_alpha / 2) ** 3 * Psi_0)
 
     # Table 1:
     condition_a = (-np.pi / 2 <= alpha - np.pi / 2)
@@ -673,9 +676,9 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
         for i, phi_i in enumerate(angle_i):
             sign = (-1) ** (i + 1)
             I_phi_S, I_phi_L, I_phi_C = I(alpha, phi_i)
-            Psi_S_prime += tt.switch(condition_i, sign * I_phi_S, 0)
-            Psi_L_prime += tt.switch(condition_i, sign * I_phi_L, 0)
-            Psi_C_prime += tt.switch(condition_i, sign * I_phi_C, 0)
+            Psi_S_prime += jnp.where(condition_i, sign * I_phi_S, 0)
+            Psi_L_prime += jnp.where(condition_i, sign * I_phi_L, 0)
+            Psi_C_prime += jnp.where(condition_i, sign * I_phi_C, 0)
 
     # Compute everything for alpha=0
     angles_alpha0 = [-np.pi / 2, x1, x2, np.pi / 2]
@@ -690,31 +693,6 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
         Psi_L_prime_alpha0 += sign * I_phi_L_alpha0
         Psi_C_prime_alpha0 += sign * I_phi_C_alpha0
 
-    # P_star_alpha0 = (1 - g ** 2) / (1 + g ** 2 + 2 * g * 1) ** 1.5
-
-    # Rho_S_alpha0, Rho_S_0_alpha0, Rho_L_alpha0, Rho_C_alpha0 = rho(omega_0, P_0,
-    #                                                                P_star_alpha0)
-    #
-    # Rho_S_prime_alpha0, Rho_S_0_prime_alpha0, Rho_L_prime_alpha0, Rho_C_prime_alpha0 = rho(
-    #     omega_prime, P_0, P_star_alpha0
-    # )
-
-    # # Equation 11:
-    # Psi_S_alpha0 = 1
-    # Psi_L_alpha0 = 1
-    # Psi_C_alpha0 = (-1 + 5 / 3)
-
-    # # Equation 37
-    # F_S_alpha0 = np.pi / 16 * (omega_0 * Rho_S_alpha0 * Psi_S_alpha0 +
-    #                            omega_prime * Rho_S_prime_alpha0 *
-    #                            Psi_S_prime_alpha0)
-    # F_L_alpha0 = np.pi / 12 * (omega_0 * Rho_L_alpha0 * Psi_L_alpha0 +
-    #                            omega_prime * Rho_L_prime_alpha0 *
-    #                            Psi_L_prime_alpha0)
-    # F_C_alpha0 = 3 * np.pi / 64 * (omega_0 * Rho_C_alpha0 * Psi_C_alpha0 +
-    #                                omega_prime * Rho_C_prime_alpha0 *
-    #                                Psi_C_prime_alpha0)
-
     # Equation 37
     F_S = np.pi / 16 * (omega_0 * Rho_S * Psi_S +
                         omega_prime * Rho_S_prime * Psi_S_prime)
@@ -724,22 +702,15 @@ def reflected_phase_curve_inhomogeneous(phases, omega_0, omega_prime, x1, x2,
                             omega_prime * Rho_C_prime * Psi_C_prime)
 
     sobolev_fluxes = F_S + F_L + F_C
-    F_max = tt.max(sobolev_fluxes)
+    F_max = jnp.max(sobolev_fluxes)
 
     Psi = sobolev_fluxes / F_max
 
     flux_ratio_ppm = 1e6 * a_rp**-2 * Psi * A_g
 
-    if return_q:
-        alpha_sort_order = np.argsort(alpha)
-        sin_abs_sort_alpha = np.sin(abs_alpha[alpha_sort_order]).astype(floatX)
-        sort_alpha = alpha[alpha_sort_order].astype(floatX)
+    q = _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha,
+                                 alpha_sort_order)
 
-        q = _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha,
-                                     alpha_sort_order)
+    # F_0 = F_S_alpha0 + F_L_alpha0 + F_C_alpha0
 
-        # F_0 = F_S_alpha0 + F_L_alpha0 + F_C_alpha0
-
-        return flux_ratio_ppm, g, q
-    else:
-        return flux_ratio_ppm, g
+    return flux_ratio_ppm, g, q
