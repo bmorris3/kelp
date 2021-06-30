@@ -6,7 +6,8 @@ requires = [
     "wheel",
     "extension-helpers",
     "numpy",
-    "cython==0.29.14"
+    "cython"
+#    "cython==0.29.14"
 ]
 
 build-backend = 'setuptools.build_meta'
