@@ -6,8 +6,8 @@ requires = [
     "wheel",
     "extension-helpers",
     "numpy",
-    "cython"
-#    "cython==0.29.14"
+    "pytest-astropy",
+    "cython==0.29.14"
 ]
 
 build-backend = 'setuptools.build_meta'
