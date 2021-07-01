@@ -5,5 +5,7 @@ channels:
 dependencies:
   - pymc3
   - llvm
-  - clang-11
   - exoplanet
+  - clang-11
+  - pip:
+    - pytest-astropy
