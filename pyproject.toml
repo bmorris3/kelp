@@ -6,7 +6,6 @@ requires = [
     "wheel",
     "extension-helpers",
     "numpy",
-    "pytest-astropy",
     "cython==0.29.14"
 ]
 
