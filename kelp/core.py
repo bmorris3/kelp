@@ -70,7 +70,8 @@ def H(l, theta, alpha):
                 tilda_mu(theta, alpha) ** 2 + 12)
     elif l == 5:
         return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
-                tilda_mu(theta, alpha) ** 3 + 120)
+                tilda_mu(theta, alpha) ** 3 + 120 * 
+                tilda_mu(theta, alpha))
     elif l == 6:
         return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
                 tilda_mu(theta, alpha) ** 4 + 720 *
@@ -143,9 +144,37 @@ def reflected_phase_curve(xi, omega, g, a_rp):
     alpha_plus = np.sin(abs_alpha / 2) + np.cos(abs_alpha / 2)
     alpha_minus = np.sin(abs_alpha / 2) - np.cos(abs_alpha / 2)
 
+    valid_conditions = (
+        (alpha_minus != -1) & (alpha_plus != 1) & (alpha_plus != -1) &
+        (alpha_minus != 1)
+    )
+    num1 = np.where(
+        valid_conditions,
+        (1 + alpha_minus),
+        1
+    )
+    num2 = np.where(
+        valid_conditions,
+        (alpha_plus - 1),
+        1
+    )
+    denom1 = np.where(
+        valid_conditions,
+        (1 + alpha_plus),
+        1
+    )
+    denom2 = np.where(
+        valid_conditions,
+        (1 - alpha_minus),
+        1
+    )
+
     # Equation 11:
-    Psi_0 = np.log((1 + alpha_minus) * (alpha_plus - 1) /
-                   (1 + alpha_plus) / (1 - alpha_minus))
+    Psi_0 = np.where(
+        valid_conditions,
+        np.log(num1 * num2 / denom1 / denom2),
+        0
+    )
 
     Psi_S = 1 - 0.5 * (np.cos(abs_alpha / 2) -
                        1.0 / np.cos(abs_alpha / 2)) * Psi_0
@@ -154,6 +183,12 @@ def reflected_phase_curve(xi, omega, g, a_rp):
     Psi_C = (-1 + 5 / 3 * np.cos(abs_alpha / 2) ** 2 - 0.5 *
              np.tan(abs_alpha / 2) * np.sin(abs_alpha / 2) ** 3 * Psi_0)
 
+    # Fix the case when the phase angle is exactly 0 or pi
+    Psi_S[abs_alpha == 0] = 1
+    Psi_C[abs_alpha == 0] = 2 / 3
+    Psi_S[abs_alpha == np.pi] = 0
+    Psi_C[abs_alpha == np.pi] = 0
+
     # Equation 8:
     A_g = omega / 8 * (P_0 - 1) + eps / 2 + eps ** 2 / 6 + eps ** 3 / 24
 
@@ -161,9 +196,6 @@ def reflected_phase_curve(xi, omega, g, a_rp):
     Psi = ((12 * Rho_S * Psi_S + 16 * Rho_L *
             Psi_L + 9 * Rho_C * Psi_C) /
            (12 * Rho_S_0 + 16 * Rho_L + 6 * Rho_C))
-
-    # Fix the case when the phase angle is exactly 0 or 1:
-    Psi[np.isnan(Psi)] = 0
 
     flux_ratio_ppm = 1e6 * (a_rp ** -2 * A_g * Psi)
 
