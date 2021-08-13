@@ -46,7 +46,7 @@ We'll also set up the model parameters using the :math:`h_{m\ell}` basis:
     lmax = 1             # \ell_{max}
     C = [[0],            # C_{m \ell} terms
          [0, 0.15, 0]]
-    obs_err = 1e-4       # Observational white noise
+    obs_err = 50         # Observational white noise
 
 Now we'll initialize a noisy instance of the model to be our "truth" in
 this example, which we will recover with optimization techniques:
@@ -94,7 +94,7 @@ this example, which we will recover with optimization techniques:
     lmax = 1
     C = [[0],
          [0, 0.15, 0]]
-    obs_err = 1e-4
+    obs_err = 50
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
     obs = model.thermal_phase_curve(xi, f=f).flux
@@ -223,7 +223,7 @@ measure the uncertainty on the maximum-likelihood parameters:
     lmax = 1
     C = [[0],
          [0, 0.15, 0]]
-    obs_err = 1e-4
+    obs_err = 50
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
     obs = model.thermal_phase_curve(xi, f=f).flux
@@ -359,7 +359,7 @@ the theano module:
     true_C_11 = 0.15
     C = [[0],
          [0, true_C_11, 0]]
-    obs_err = 5e-5
+    obs_err = 50
     model = Model(hotspot_offset, alpha, omega,
                   A_B, C, lmax, planet=planet, filt=filt)
     obs = model.thermal_phase_curve(xi, f=true_f).flux
