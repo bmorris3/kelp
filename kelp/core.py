@@ -314,11 +314,11 @@ class Model(object):
         result : `~numpy.ndarray`
             Hermite Polynomial evaluated at angles :math:`\theta`.
         """
-        if l < 14:
+        if l < 52:
             return H(l, theta, self.alpha)
 
         else:
-            raise NotImplementedError('H only implemented to l=13, l={0}'
+            raise NotImplementedError('H only implemented to l=51, l={0}'
                                       .format(l))
 
     def h_ml(self, m, l, theta, phi):
