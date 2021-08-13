@@ -86,6 +86,7 @@ where the intensity :math:`I` is given by
 
 for a filter bandpass transmittance function :math:`\mathcal{F}_\lambda`.
 
+
 Example temperature fields
 --------------------------
 
@@ -93,9 +94,9 @@ The first several terms in the spherical harmonic expansion of the temperature
 map in the :math:`h_{m\ell}` basis. Each subplot shows the temperature perturbation (purple
 to yellow is cold to hot) as a function of latitude and longitude (shown in
 Mollweide projections such that the substellar longitude is in the center of
-the plot). The :math:`\ell = 0` terms are always zero. The :math:`m=2` terms are asymmetric
+the plot). The :math:`m = 0` terms are always zero. The :math:`\ell=2` terms are asymmetric
 about the equator and therefore do not represent typical GCM results, so we
-keep all :math:`m=2` terms fixed to zero in the subsequent fits. These maps were
+keep all :math:`\ell=2` terms fixed to zero in the subsequent fits. These maps were
 generated with :math:`\alpha=0.6` and :math:`\omega_\mathrm{drag} = 4.5`.
 
 .. plot::
@@ -116,17 +117,17 @@ generated with :math:`\alpha=0.6` and :math:`\omega_\mathrm{drag} = 4.5`.
 
     p = Planet.from_name('HD 189733')
 
-    def indexer(m, l):
+    def indexer(l, m):
         C_ml = [[0],
                 [0, 0, 0],
                 [0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0]]
-        C_ml[m][l] = 1
+        C_ml[l][m] = 1
         return C_ml
 
-    def generate_temp_map(a, m, l):
+    def generate_temp_map(a, l, m):
         hotspot_offset = 0
-        C_ml = indexer(m, l)
+        C_ml = indexer(l, m)
 
 
         alpha = 0.6
@@ -157,16 +158,16 @@ generated with :math:`\alpha=0.6` and :math:`\omega_\mathrm{drag} = 4.5`.
          for i in range(len(cml_example[-1]) * len(cml_example))]
     ).reshape((len(cml_example), len(cml_example[-1])))
 
-    for m in range(0, lmax + 1):
-        for l in range(-m, m + 1):
-            temperature, theta, phi = generate_temp_map(0.17, m, l)
+    for l in range(0, lmax + 1):
+        for m in range(-l, l + 1):
+            temperature, theta, phi = generate_temp_map(0.17, l, m)
             phirange = (-np.pi <= phi) & (np.pi >= phi)
-            cax = ax[m, l + len(cml_example[-1])//2].pcolormesh(
+            cax = ax[l, m + len(cml_example[-1])//2].pcolormesh(
                 phi[phirange], (theta - np.pi/2), temperature[:, phirange],
                 rasterized=True
             )
-            ax[m, l + len(cml_example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
-            ax[m, l + len(cml_example[-1])//2].grid(False)
+            ax[l, m + len(cml_example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
+            ax[l, m + len(cml_example[-1])//2].grid(False)
 
     for i in range(len(cml_example)):
         for j in range(len(cml_example[-1])):
@@ -198,17 +199,17 @@ perturbation on the temperature maps with :math:`\ell \neq 0`.
 
     p = Planet.from_name('HD 189733')
 
-    def indexer(m, l):
+    def indexer(l, m):
         C_ml = [[0],
                 [0, 0, 0],
                 [0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0]]
-        C_ml[m][l] = 1
+        C_ml[l][m] = 1
         return C_ml
 
-    def generate_temp_map(a, m, l):
+    def generate_temp_map(a, l, m):
         hotspot_offset = 0
-        C_ml = indexer(m, l)
+        C_ml = indexer(l, m)
 
 
         alpha = 0.9
@@ -239,16 +240,16 @@ perturbation on the temperature maps with :math:`\ell \neq 0`.
          for i in range(len(cml_example[-1]) * len(cml_example))]
     ).reshape((len(cml_example), len(cml_example[-1])))
 
-    for m in range(0, lmax + 1):
-        for l in range(-m, m + 1):
-            temperature, theta, phi = generate_temp_map(0.17, m, l)
+    for l in range(0, lmax + 1):
+        for m in range(-l, l + 1):
+            temperature, theta, phi = generate_temp_map(0.17, l, m)
             phirange = (-np.pi <= phi) & (np.pi >= phi)
-            cax = ax[m, l + len(cml_example[-1])//2].pcolormesh(
+            cax = ax[l, m + len(cml_example[-1])//2].pcolormesh(
                 phi[phirange], (theta - np.pi/2), temperature[:, phirange],
                 rasterized=True
             )
-            ax[m, l + len(cml_example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
-            ax[m, l + len(cml_example[-1])//2].grid(False)
+            ax[l, m + len(cml_example[-1])//2].set_title(f'$m = {m},\,\ell = {l}$')
+            ax[l, m + len(cml_example[-1])//2].grid(False)
 
     for i in range(len(cml_example)):
         for j in range(len(cml_example[-1])):
