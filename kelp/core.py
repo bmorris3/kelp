@@ -70,8 +70,7 @@ def H(l, theta, alpha):
                 tilda_mu(theta, alpha) ** 2 + 12)
     elif l == 5:
         return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
-                tilda_mu(theta, alpha) ** 3 + 120 * 
-                tilda_mu(theta, alpha))
+                tilda_mu(theta, alpha) ** 3 + 120)
     elif l == 6:
         return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
                 tilda_mu(theta, alpha) ** 4 + 720 *
