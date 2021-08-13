@@ -70,7 +70,8 @@ def H(l, theta, alpha):
                 tilda_mu(theta, alpha) ** 2 + 12)
     elif l == 5:
         return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
-                tilda_mu(theta, alpha) ** 3 + 120)
+                tilda_mu(theta, alpha) ** 3 + 120 *
+                tilda_mu(theta, alpha))
     elif l == 6:
         return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
                 tilda_mu(theta, alpha) ** 4 + 720 *
@@ -313,11 +314,11 @@ class Model(object):
         result : `~numpy.ndarray`
             Hermite Polynomial evaluated at angles :math:`\theta`.
         """
-        if l < 8:
+        if l < 14:
             return H(l, theta, self.alpha)
 
         else:
-            raise NotImplementedError('H only implemented to l=7, l={0}'
+            raise NotImplementedError('H only implemented to l=13, l={0}'
                                       .format(l))
 
     def h_ml(self, m, l, theta, phi):
