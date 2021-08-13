@@ -813,8 +813,7 @@ cdef float H(int l, float theta, float alpha) nogil:
 cdef float h_ml_cython(float omega_drag, float alpha, int m, int l, float theta,
                        float phi, float C) nogil:
     r"""
-    The :math:`h_{m
-ell}` basis function.
+    The :math:`h_{m\ell}` basis function.
 
     Parameters
     ----------
@@ -836,8 +835,7 @@ ell}` basis function.
     Returns
     -------
     hml : `~numpy.ndarray`
-        :math:`h_{m
-ell}` basis function.
+        :math:`h_{m\ell}` basis function.
     """
     cdef float prefactor, result = 0
 
