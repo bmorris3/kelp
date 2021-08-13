@@ -272,16 +272,16 @@ Let's finally plot the final results:
 
     with model:
         for sample in xo.get_samples_from_trace(trace, size=10):
-            plt.plot(binphase, xo.eval_in_model(flux_norm, sample), alpha=0.5,
+            plt.plot(binphase, pmx.eval_in_model(flux_norm, sample), alpha=0.5,
                      color='r', zorder=10)
 
-        plt.plot(binphase, xo.eval_in_model(reflected_ppm, sample),
+        plt.plot(binphase, pmx.eval_in_model(reflected_ppm, sample),
                  color='DodgerBlue', zorder=10, label='reflected')
-        plt.plot(binphase, xo.eval_in_model(1e6 * thermal, sample), color='m',
+        plt.plot(binphase, pmx.eval_in_model(1e6 * thermal, sample), color='m',
                  zorder=10, label='thermal')
-        plt.plot(binphase, xo.eval_in_model(ellipsoidal_model_ppm, sample),
+        plt.plot(binphase, pmx.eval_in_model(ellipsoidal_model_ppm, sample),
                  color='b', zorder=10, label='ellipsoidal')
-        plt.plot(binphase, xo.eval_in_model(doppler_model_ppm, sample), color='g',
+        plt.plot(binphase, pmx.eval_in_model(doppler_model_ppm, sample), color='g',
                  zorder=10, label='doppler')
 
     plt.legend()
@@ -484,17 +484,17 @@ Let's finally plot the final results:
     plt.errorbar(binphase, binflux, binerror, fmt='.', color='k', ecolor='silver')
 
     with model:
-        for i, sample in enumerate(xo.get_samples_from_trace(trace, size=10)):
-            plt.plot(binphase, xo.eval_in_model(flux_norm, sample), alpha=0.5,
+        for i, sample in enumerate(pmx.get_samples_from_trace(trace, size=10)):
+            plt.plot(binphase, pmx.eval_in_model(flux_norm, sample), alpha=0.5,
                      color='r', zorder=10)
 
-            plt.plot(binphase, xo.eval_in_model(reflected_ppm, sample),
+            plt.plot(binphase, pmx.eval_in_model(reflected_ppm, sample),
                      color='DodgerBlue', zorder=10, label='reflected' if i==0 else None)
-            plt.plot(binphase, xo.eval_in_model(1e6 * thermal, sample), color='m',
+            plt.plot(binphase, pmx.eval_in_model(1e6 * thermal, sample), color='m',
                      zorder=10, label='thermal' if i==0 else None)
-            plt.plot(binphase, xo.eval_in_model(ellipsoidal_model_ppm, sample),
+            plt.plot(binphase, pmx.eval_in_model(ellipsoidal_model_ppm, sample),
                      color='b', zorder=10, label='ellipsoidal' if i==0 else None)
-            plt.plot(binphase, xo.eval_in_model(doppler_model_ppm, sample), color='g',
+            plt.plot(binphase, pmx.eval_in_model(doppler_model_ppm, sample), color='g',
                      zorder=10, label='doppler' if i==0 else None)
 
     plt.legend()
@@ -691,7 +691,7 @@ for the light curve normalization.
         # Plot the results
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(binphase, binflux, 'k.')
-        ax.plot(binphase, xo.eval_in_model(flux_norm, map_soln), 'r', lw=2,
+        ax.plot(binphase, pmx.eval_in_model(flux_norm, map_soln), 'r', lw=2,
                 label='composite')
         plt.show()
 
@@ -721,8 +721,8 @@ We can plot the results with the following commands:
 
     ax.errorbar(binphase, binflux, binerror, fmt='.', color='k', ecolor='silver')
     with model:
-        for i, sample in enumerate(xo.get_samples_from_trace(trace, size=5)):
-            ax.plot(binphase, xo.eval_in_model(flux_norm, sample), 'r')
+        for i, sample in enumerate(pmx.get_samples_from_trace(trace, size=5)):
+            ax.plot(binphase, pmx.eval_in_model(flux_norm, sample), 'r')
 
     ax.set(xlabel='Phase', ylabel='$F_p/F_\mathrm{star}$ [ppm]',
               title='Kepler-7 b')
@@ -877,8 +877,8 @@ We can plot the results with the following commands:
 
     ax.errorbar(binphase, binflux, binerror, fmt='.', color='k', ecolor='silver')
     with model:
-        for i, sample in enumerate(xo.get_samples_from_trace(trace, size=5)):
-            ax.plot(binphase, xo.eval_in_model(flux_norm, sample), 'r',
+        for i, sample in enumerate(pmx.get_samples_from_trace(trace, size=5)):
+            ax.plot(binphase, pmx.eval_in_model(flux_norm, sample), 'r',
                        label='composite' if i == 0 else None)
 
     ax.set(xlabel='Phase', ylabel='$F_p/F_\mathrm{star}$ [ppm]',
