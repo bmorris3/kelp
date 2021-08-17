@@ -9,6 +9,38 @@ from ..registries import Planet, Filter
 from ..fast import bl_test, argmin_test
 
 
+def trapz2d(z, x, y):
+    """
+    Integrates a regularly spaced 2D grid using the composite trapezium rule.
+
+    Source: https://github.com/tiagopereira/python_tips/blob/master/code/trapz2d.py
+
+    Parameters
+    ----------
+    z : `~numpy.ndarray`
+        2D array
+    x : `~numpy.ndarray`
+        grid values for x (1D array)
+    y : `~numpy.ndarray`
+        grid values for y (1D array)
+
+    Returns
+    -------
+    t : `~numpy.ndarray`
+        Trapezoidal approximation to the integral under z
+    """
+    m = z.shape[0] - 1
+    n = z.shape[1] - 1
+    dx = x[1] - x[0]
+    dy = y[1] - y[0]
+
+    s1 = z[0, 0, :] + z[m, 0, :] + z[0, n, :] + z[m, n, :]
+    s2 = (np.sum(z[1:m, 0, :], axis=0) + np.sum(z[1:m, n, :], axis=0) +
+          np.sum(z[0, 1:n, :], axis=0) + np.sum(z[m, 1:n, :], axis=0))
+    s3 = np.sum(np.sum(z[1:m, 1:n, :], axis=0), axis=0)
+    return dx * dy * (s1 + 2 * s2 + 4 * s3) / 4
+
+
 @pytest.mark.parametrize("wavelength, temp",
                          ((0.5e-6, 1000),
                           (0.5e-6, 500),
@@ -103,3 +135,28 @@ def test_integrated_temperatures():
 
     # Check within 1 sigma of Keating et al. 2019 nightside
     assert abs(979 - nightside) / 58 < 1
+
+
+def test_albedo():
+    f = 2**-0.5
+    p = Planet.from_name('HD 189733')
+    C_ml = [[0],
+            [0, 0.0, 0]]
+    m = Model(
+        -0.8, 0.575, 4.5, 0, C_ml, 1,
+        planet=p,
+        filt=Filter.from_name('IRAC 1')
+    )
+    n_theta, n_phi = 15, 100
+    temp, theta, phi = m.temperature_map(n_theta, n_phi, f=f)
+
+    theta2d, phi2d = np.meshgrid(theta, phi)
+
+    A_B = 1 - p.a**2 * (
+        trapz2d(
+            temp.T[..., None]**4 * np.sin(theta2d[..., None]) *
+            (phi2d[..., None] > 0), phi, theta
+        ) / ( np.pi * p.T_s**4)
+    )[0]
+
+    assert abs(A_B - 0) < 1e-2

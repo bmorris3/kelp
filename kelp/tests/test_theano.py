@@ -5,6 +5,7 @@ import pymc3 as pm
 import pymc3_ext as pmx
 import astropy.units as u
 
+from .test_core import trapz2d
 from ..core import Model
 from ..registries import Planet, Filter
 
@@ -57,3 +58,36 @@ def test_cython_vs_theano(f, c11):
     np.testing.assert_allclose(
         cython_temp_map, theano_map, atol=10
     )
+
+
+def test_albedo():
+    from ..theano.theano import thermal_phase_curve
+
+    f = 2**-0.5
+    p = Planet.from_name('HD 189733')
+    filt = Filter.from_name('IRAC 1')
+
+    # Set resolution of grid points on sphere:
+    n_phi = 100
+    n_theta = 10
+    phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
+    theta = np.linspace(0, np.pi, n_theta)
+    theta2d, phi2d = np.meshgrid(theta, phi)
+    xi = np.linspace(-np.pi, np.pi, 100)
+
+    with pm.Model():
+        thermal_pc, T = thermal_phase_curve(
+            xi, -0.8, 4.5, 0.575, 0, p.T_s, p.a, p.rp_a, 0,
+            theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
+        )
+
+        theano_map = pmx.eval_in_model(T)[..., 0, 0]
+
+    A_B = 1 - p.a**2 * (
+        trapz2d(
+            theano_map[..., None]**4 * np.sin(theta2d[..., None]) *
+            (phi2d[..., None] > 0), phi, theta
+        ) / ( np.pi * p.T_s**4)
+    )[0]
+
+    assert abs(A_B - 0) < 5e-2
