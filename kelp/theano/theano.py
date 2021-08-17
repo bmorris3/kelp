@@ -194,13 +194,25 @@ def integrate_planck(filt_wavelength, filt_trans,
     return int_bb_num
 
 
+def interpolate(x, x0, y0):
+    idx = np.searchsorted(x0, x)
+    dl = x - x0[idx - 1]
+    dr = x0[idx] - x
+    d = dl + dr
+    wl = dr / d
+
+    return wl * y0[idx - 1] + (1 - wl) * y0[idx]
+
+
 broadcaster = tt.TensorType(floatX, 4 * [True, ])
 
 
 def thermal_phase_curve(xi, hotspot_offset, omega_drag,
                         alpha, C_11, T_s, a_rs, rp_a, A_B,
                         theta2d, phi2d, filt_wavelength,
-                        filt_transmittance, f):
+                        filt_transmittance, f,
+                        stellar_spectrum_wavelength=None,
+                        stellar_spectrum_spectral_flux_density=None):
     r"""
     Compute the phase curve evaluated at phases ``xi``.
 
@@ -287,15 +299,24 @@ def thermal_phase_curve(xi, hotspot_offset, omega_drag,
                  sinsq_2d(theta2d_tt[..., 0]) *
                  cos_2d(phi + xi_tt[..., 0]))
 
-    planck_star = trapz3d(filt_transmittance *
-                          blackbody_lambda(filt_wavelength, T_s),
-                          filt_wavelength)
+#    if tt.any(tt.neq(stellar_spectrum_spectral_flux_density, 0)):
+    if stellar_spectrum_spectral_flux_density is not None:
+        planck_star = trapz3d(filt_transmittance *
+                              interpolate(filt_wavelength,
+                                  stellar_spectrum_wavelength,
+                                  stellar_spectrum_spectral_flux_density
+                              ),
+                              filt_wavelength)
+    else:
+        planck_star = trapz3d(filt_transmittance *
+                              blackbody_lambda(filt_wavelength, T_s),
+                              filt_wavelength) * pi
 
     integral = trapz2d(integrand * visible,
                        phi2d_tt[:, 0, 0, 0],
                        theta2d_tt[0, :, 0, 0])
 
-    fluxes = integral * tt.pow(rp_rs, 2) / pi / planck_star
+    fluxes = integral * tt.pow(rp_rs, 2) / planck_star
     return fluxes, T
 
 

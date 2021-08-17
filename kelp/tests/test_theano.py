@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 import pymc3 as pm
 import pymc3_ext as pmx
@@ -7,15 +9,20 @@ from ..core import Model
 from ..registries import Planet, Filter
 
 
-def test_cython_vs_theano():
+@pytest.mark.parametrize(
+    "f, c11",
+     ((0.2, 0.1),
+      (0.5, 0.1),
+      (0.6, 0.1),
+      (0.6, 0.5),
+      (0.7, 0.2),
+      (0.7, 0.1)))
+def test_cython_vs_theano(f, c11):
     from ..theano.theano import thermal_phase_curve
-    # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
-    f = 0.68
     planet = Planet.from_name('HD 189733')
     filt = Filter.from_name('IRAC 1')
-    filt.bin_down(5)
     C_ml = [[0],
-            [0, 0.18, 0]]
+            [0, c11, 0]]
     m = Model(
         -0.8, 0.575, 4.5, 0, C_ml, 1,
         planet=planet,
@@ -31,15 +38,21 @@ def test_cython_vs_theano():
     theta2d, phi2d = np.meshgrid(theta, phi)
 
     cython_phase_curve = m.thermal_phase_curve(xi, f=f).flux
+    cython_temp_map, _, _ = m.temperature_map(n_theta, n_phi, f=f)
 
     with pm.Model():
         thermal_pc, T = thermal_phase_curve(
-            xi, -0.8, 4.5, 0.575, 0.18, planet.T_s, planet.a, planet.rp_a, 0,
+            xi, -0.8, 4.5, 0.575, c11, planet.T_s, planet.a, planet.rp_a, 0,
             theta2d, phi2d, filt.wavelength.to(u.m).value, filt.transmittance, f
         )
 
         theano_phase_curve = 1e6 * pmx.eval_in_model(thermal_pc)
+        theano_map = pmx.eval_in_model(T)[..., 0, 0].T
 
     np.testing.assert_allclose(
         cython_phase_curve, theano_phase_curve, atol=5
+    )
+
+    np.testing.assert_allclose(
+        cython_temp_map, theano_map, atol=10
     )
