@@ -11,12 +11,13 @@ from ..registries import Planet, Filter
 
 @pytest.mark.parametrize(
     "f, c11",
-     ((0.2, 0.1),
-      (0.5, 0.1),
-      (0.6, 0.1),
-      (0.6, 0.5),
-      (0.7, 0.2),
-      (0.7, 0.1)))
+    ((0.2, 0.1),
+     (0.5, 0.1),
+     (0.6, 0.1),
+     (0.6, 0.5),
+     (0.7, 0.2),
+     (0.7, 0.1))
+)
 def test_cython_vs_theano(f, c11):
     from ..theano.theano import thermal_phase_curve
     planet = Planet.from_name('HD 189733')
