@@ -807,6 +807,9 @@ cdef float H(int l, float theta, float alpha) nogil:
             3333328495873377153506755800803104098615296.0*tilda_mu(theta, alpha)**3 +
             -199999709752402912389189334578924129091584.0*tilda_mu(theta, alpha)**1)
 
+def H_cython_test(lmax, theta, alpha):
+    return H(lmax, theta, alpha)
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)

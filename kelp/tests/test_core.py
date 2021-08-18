@@ -4,9 +4,53 @@ import numpy as np
 from astropy.modeling.models import BlackBody
 import astropy.units as u
 
-from ..core import Model
+from ..core import Model, tilda_mu, H
 from ..registries import Planet, Filter
-from ..fast import bl_test, argmin_test
+from ..fast import bl_test, argmin_test, H_cython_test
+
+
+def H_testing(l, theta, alpha):
+    r"""
+    Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
+
+    Parameters
+    ----------
+    l : int
+        Implemented through :math:`\ell \leq 7`.
+    theta : float
+        Angle :math:`\theta`
+    alpha : float
+        Dimensionless fluid number :math:`\alpha`
+
+    Returns
+    -------
+    result : `~numpy.ndarray`
+        Hermite Polynomial evaluated at angles :math:`\theta`.
+    """
+    if l == 0:
+        return np.ones_like(theta)
+    elif l == 1:
+        return 2 * tilda_mu(theta, alpha)
+    elif l == 2:
+        return 4 * tilda_mu(theta, alpha) ** 2 - 2
+    elif l == 3:
+        return 8 * tilda_mu(theta, alpha) ** 3 - 12 * tilda_mu(theta, alpha)
+    elif l == 4:
+        return (16 * tilda_mu(theta, alpha) ** 4 - 48 *
+                tilda_mu(theta, alpha) ** 2 + 12)
+    elif l == 5:
+        return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
+                tilda_mu(theta, alpha) ** 3 + 120 *
+                tilda_mu(theta, alpha))
+    elif l == 6:
+        return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
+                tilda_mu(theta, alpha) ** 4 + 720 *
+                tilda_mu(theta, alpha) ** 2 - 120)
+    elif l == 7:
+        return (128 * tilda_mu(theta, alpha) ** 7 -
+                1344 * tilda_mu(theta, alpha) ** 5 +
+                3360 * tilda_mu(theta, alpha) ** 3 -
+                1680 * tilda_mu(theta, alpha))
 
 
 def trapz2d(z, x, y):
@@ -116,7 +160,6 @@ def test_argmin(y, x):
 
 
 def test_integrated_temperatures():
-
     # These parameters have been chi-by-eye "fit" to the Spitzer/3.6 um PC
     f = 0.67
 
@@ -154,3 +197,22 @@ def test_albedo():
 
     assert abs(A_B - 0) < 1e-2
     assert abs(eps - 1) < 1e-2
+
+
+@pytest.mark.parametrize("lmax", np.arange(1, 8, dtype=int))
+def test_hermite_polynomials(lmax):
+    theta = np.linspace(0, np.pi, 10)
+    phi = np.linspace(-2*np.pi, 2*np.pi, 150)
+    theta2d, phi2d = np.meshgrid(theta, phi)
+
+    # Compare manual implementation against scipy implementation
+    np.testing.assert_allclose(
+        H_testing(lmax, theta2d, 0.6),
+        H(lmax, theta2d, 0.6)
+    )
+
+    # Compare cython implementation against scipy implementation
+    np.testing.assert_allclose(
+        [H_cython_test(lmax, th, 0.6) for th in theta],
+        H(lmax, theta, 0.6), rtol=1e-5
+    )
