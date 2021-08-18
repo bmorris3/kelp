@@ -3,7 +3,7 @@ from math import sin, cos
 import numpy as np
 from scipy.integrate import dblquad
 from scipy.interpolate import RectBivariateSpline
-
+from scipy.special import hermite
 import astropy.units as u
 from astropy.modeling.models import BlackBody
 
@@ -71,14 +71,14 @@ def tilda_mu(theta, alpha):
     return alpha * mu(theta)
 
 
-def H(l, theta, alpha):
+def H(lmax, theta, alpha):
     r"""
     Hermite Polynomials in :math:`\tilde{\mu}(\theta)`.
 
     Parameters
     ----------
-    l : int
-        Implemented through :math:`\ell \leq 7`.
+    lmax : int
+        Maximum spherical harmonic degree.
     theta : float
         Angle :math:`\theta`
     alpha : float
@@ -89,30 +89,9 @@ def H(l, theta, alpha):
     result : `~numpy.ndarray`
         Hermite Polynomial evaluated at angles :math:`\theta`.
     """
-    if l == 0:
-        return np.ones_like(theta)
-    elif l == 1:
-        return 2 * tilda_mu(theta, alpha)
-    elif l == 2:
-        return 4 * tilda_mu(theta, alpha) ** 2 - 2
-    elif l == 3:
-        return 8 * tilda_mu(theta, alpha) ** 3 - 12 * tilda_mu(theta, alpha)
-    elif l == 4:
-        return (16 * tilda_mu(theta, alpha) ** 4 - 48 *
-                tilda_mu(theta, alpha) ** 2 + 12)
-    elif l == 5:
-        return (32 * tilda_mu(theta, alpha) ** 5 - 160 *
-                tilda_mu(theta, alpha) ** 3 + 120 *
-                tilda_mu(theta, alpha))
-    elif l == 6:
-        return (64 * tilda_mu(theta, alpha) ** 6 - 480 *
-                tilda_mu(theta, alpha) ** 4 + 720 *
-                tilda_mu(theta, alpha) ** 2 - 120)
-    elif l == 7:
-        return (128 * tilda_mu(theta, alpha) ** 7 -
-                1344 * tilda_mu(theta, alpha) ** 5 +
-                3360 * tilda_mu(theta, alpha) ** 3 -
-                1680 * tilda_mu(theta, alpha))
+    return np.sum([a * tilda_mu(theta, alpha) ** l for l, a in
+        zip(range(0, lmax + 1)[::-1], list(hermite(n=lmax)))], axis=0
+    )
 
 
 def _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha, sort):
