@@ -150,13 +150,7 @@ def test_albedo():
     n_theta, n_phi = 15, 100
     temp, theta, phi = m.temperature_map(n_theta, n_phi, f=f)
 
-    theta2d, phi2d = np.meshgrid(theta, phi)
-
-    A_B = 1 - p.a**2 * (
-        trapz2d(
-            temp.T[..., None]**4 * np.sin(theta2d[..., None]) *
-            (phi2d[..., None] > 0), phi, theta
-        ) / ( np.pi * p.T_s**4)
-    )[0]
+    A_B, eps = m.albedo_redist(temp, theta, phi)
 
     assert abs(A_B - 0) < 1e-2
+    assert abs(eps - 1) < 1e-2

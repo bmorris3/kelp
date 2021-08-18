@@ -12,6 +12,38 @@ from .registries import PhaseCurve
 __all__ = ['Model', 'StellarSpectrum']
 
 
+def trapz2d(z, x, y):
+    """
+    Integrates a regularly spaced 2D grid using the composite trapezium rule.
+
+    Source: https://github.com/tiagopereira/python_tips/blob/master/code/trapz2d.py
+
+    Parameters
+    ----------
+    z : `~numpy.ndarray`
+        2D array
+    x : `~numpy.ndarray`
+        grid values for x (1D array)
+    y : `~numpy.ndarray`
+        grid values for y (1D array)
+
+    Returns
+    -------
+    t : `~numpy.ndarray`
+        Trapezoidal approximation to the integral under z
+    """
+    m = z.shape[0] - 1
+    n = z.shape[1] - 1
+    dx = x[1] - x[0]
+    dy = y[1] - y[0]
+
+    s1 = z[0, 0, :] + z[m, 0, :] + z[0, n, :] + z[m, n, :]
+    s2 = (np.sum(z[1:m, 0, :], axis=0) + np.sum(z[1:m, n, :], axis=0) +
+          np.sum(z[0, 1:n, :], axis=0) + np.sum(z[m, 1:n, :], axis=0))
+    s3 = np.sum(np.sum(z[1:m, 1:n, :], axis=0), axis=0)
+    return dx * dy * (s1 + 2 * s2 + 4 * s3) / 4
+
+
 def mu(theta):
     r"""
     Angle :math:`\mu = \cos(\theta)`
@@ -416,6 +448,52 @@ class Model(object):
         T = T_eq * (1 - self.A_B) ** 0.25 * (1 + h_ml_sum)
 
         return T, theta, phi
+
+    def albedo_redist(self, temp_map, theta, phi):
+        """
+        Compute the Bond albedo and heat redistribution efficiency for
+        ``temp_map``.
+
+        Parameters
+        ----------
+        temp_map : `~np.ndarray`
+            Temperature map produced by e.g. `~kelp.Model.temperature_map`.
+        theta : `~np.ndarray`
+            Latitudes produced by e.g. `~kelp.Model.temperature_map`.
+        phi : `~np.ndarray`
+            Longitudes produced by e.g. `~kelp.Model.temperature_map`.
+
+        Returns
+        -------
+        bond_albedo : float
+            Bond albedo
+        epsilon : float
+            Heat redistribution efficiency
+        """
+        theta2d, phi2d = np.meshgrid(theta, phi)
+
+        flux_planet_total = trapz2d(
+            temp_map.T[..., None] ** 4 * np.sin(theta2d[..., None]) *
+            (phi2d[..., None] > 0),
+            phi, theta
+        )[0]
+        flux_star = np.pi * self.T_s ** 4
+
+        bond_albedo = 1 - self.a_rs ** 2 * flux_planet_total / flux_star
+
+        mask_dayside = np.abs(phi2d) < np.pi / 2
+        mask_nightside = np.abs(phi2d + np.pi) < np.pi / 2
+
+        flux_dayside = np.sum(
+            (temp_map[..., 0, 0] * mask_dayside) ** 4) / np.sum(mask_dayside)
+        flux_nightside = np.sum(
+            (temp_map[..., 0, 0] * mask_nightside) ** 4) / np.sum(
+            mask_nightside)
+
+        epsilon = flux_nightside / flux_dayside
+
+        return bond_albedo, epsilon
+
 
     def integrated_blackbody(self, n_theta, n_phi, f=2 ** -0.5, cython=True):
         """
