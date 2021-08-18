@@ -216,3 +216,4 @@ def test_hermite_polynomials(lmax):
         [H_cython_test(lmax, th, 0.6) for th in theta],
         H(lmax, theta, 0.6), rtol=1e-5
     )
+
