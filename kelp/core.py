@@ -494,7 +494,6 @@ class Model(object):
 
         return bond_albedo, epsilon
 
-
     def integrated_blackbody(self, n_theta, n_phi, f=2 ** -0.5, cython=True):
         """
         Integral of the blackbody function convolved with a filter bandpass.
