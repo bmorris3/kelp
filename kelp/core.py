@@ -464,9 +464,9 @@ class Model(object):
         mask_nightside = np.abs(phi2d + np.pi) < np.pi / 2
 
         flux_dayside = np.sum(
-            (temp_map[..., 0, 0] * mask_dayside) ** 4) / np.sum(mask_dayside)
+            (temp_map.T * mask_dayside) ** 4) / np.sum(mask_dayside)
         flux_nightside = np.sum(
-            (temp_map[..., 0, 0] * mask_nightside) ** 4) / np.sum(
+            (temp_map.T * mask_nightside) ** 4) / np.sum(
             mask_nightside)
 
         epsilon = flux_nightside / flux_dayside
