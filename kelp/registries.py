@@ -201,8 +201,8 @@ class PhaseCurve(object):
     fits_file = None
     available = []
 
-    def __init__(self, xi, flux, name=None, channel=None, year=None,
-                 renormalize=False):
+    def __init__(self, xi, flux, flux_err=None, name=None, channel=None,
+                 year=None, renormalize=False):
         """
         Parameters
         ----------
@@ -210,6 +210,8 @@ class PhaseCurve(object):
             Times
         flux : `~numpy.ndarray`
             Flux measurements
+        flux_err : `~numpy.ndarray`
+            Flux errors
         name : str
             Name of the host star
         channel : str
@@ -226,8 +228,14 @@ class PhaseCurve(object):
             in_eclipse = np.abs(xi) < 0.1
             flux_in_eclipse = np.nanmedian(flux[in_eclipse])
             flux = 1e6 * (flux - flux_in_eclipse)
+            if flux_err is not None:
+                flux_err = 1e6 * flux_err
 
         self.flux = flux[np.argsort(xi)]
+
+        if flux_err is not None:
+            self.flux_err = flux_err[np.argsort(xi)]
+
         self.name = name
         self.channel = channel
         self.year = year
@@ -300,7 +308,7 @@ class PhaseCurve(object):
 
         return ax
 
-    def _add_to_fits(self, fitsfile):
+    def _add_to_fits_lit(self, fitsfile, literature=None):
         """
         Add this phase curve to a FITS archive ``fitsfile``.
 
@@ -315,5 +323,5 @@ class PhaseCurve(object):
         ra['flux'] = self.flux
         header = fits.Header(dict(YEAR=self.year,
                                   CHANNEL=self.channel,
-                                  NAME=self.name))
+                                  NAME=self.name, literature=literature))
         fitsfile.append(fits.BinTableHDU(ra, header))

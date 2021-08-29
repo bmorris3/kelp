@@ -90,7 +90,7 @@ ext_modules = [
         "kelp.fast",
         ["kelp/fast.pyx"],
         extra_compile_args=extra_compile_args,
-#        extra_link_args=extra_args,
+        extra_link_args=['-L/usr/lib/x86_64-linux-gnu/'],
         include_dirs=[np.get_include()]
     )
 ]
