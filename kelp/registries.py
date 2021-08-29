@@ -308,7 +308,7 @@ class PhaseCurve(object):
 
         return ax
 
-    def _add_to_fits_lit(self, fitsfile):
+    def _add_to_fits_lit(self, fitsfile, literature=None):
         """
         Add this phase curve to a FITS archive ``fitsfile``.
 
