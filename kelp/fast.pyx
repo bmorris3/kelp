@@ -1164,7 +1164,7 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     # grid as the filter bandpass, otherwise assume it is a Planck function.
     cdef np.ndarray[DTYPE_t, ndim=1] stellar_spectrum = blackbody(
         filt_wavelength, T_s
-    )
+    ) * pi
 
     if np.count_nonzero(stellar_spectrum_spectral_flux_density) > 0:
          stellar_spectrum = np.interp(
@@ -1204,7 +1204,7 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                            cos_2d(phi2d[phi_min:phi_max] + xi_view[k])),
                            phi[phi_min:phi_max], theta)
 
-        fluxes_view[k] = integral * rp_rs**2 / pi / planck_star
+        fluxes_view[k] = integral * rp_rs**2 / planck_star
     return fluxes
 
 @cython.boundscheck(False)

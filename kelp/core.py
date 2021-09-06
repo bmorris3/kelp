@@ -673,17 +673,19 @@ class Model(object):
                     raise ValueError("xi array must be sorted")
 
             fluxes = _phase_curve(
-                xi.astype(np.float64),
+                xi.astype('double'),
                 self.hotspot_offset,
                 self.omega_drag,
                 self.alpha, self.C_ml, self.lmax,
                 self.T_s, self.a_rs, self.rp_a,
                 self.A_B, n_theta, n_phi,
-                self.filt.wavelength.to(u.m).value,
-                self.filt.transmittance,
+                self.filt.wavelength.to(u.m).value.astype('double'),
+                self.filt.transmittance.astype('double'),
                 f,
-                self.stellar_spectrum.wavelength.to(u.m).value,
-                self.stellar_spectrum.spectral_flux_density.to(u.W/u.m**3)
+                self.stellar_spectrum.wavelength.to(
+                    u.m).value.astype('double'),
+                self.stellar_spectrum.spectral_flux_density.to(
+                    u.W/u.m**3).value.astype('double')
             )
 
         return PhaseCurve(xi, 1e6 * fluxes, channel=self.filt.name)
@@ -770,3 +772,73 @@ class StellarSpectrum(object):
         feature.
         """
         return cls(np.zeros(size) * u.m, np.zeros(size) * u.W/u.m**3)
+
+    @classmethod
+    def from_phoenix(cls, T_s, log_g=4.5, cache=False):
+        """
+        Return PHOENIX model stellar spectrum for a star with a given effective
+        temperature ``T_s`` and surface gravity ``log_g``.
+
+        Parameters
+        ----------
+        T_s : int
+            Effective temperature
+        log_g : float
+            Surface gravity
+        cache : bool
+            Cache the retrieved stellar spectrum.
+        """
+        from expecto import get_spectrum
+
+        spectrum = get_spectrum(T_s, log_g, cache=cache)
+
+        return cls(spectrum.wavelength, spectrum.flux)
+
+    @classmethod
+    def from_blackbody(cls, T_s):
+        """
+        Return PHOENIX model stellar spectrum for a star with a given effective
+        temperature ``T_s`` and surface gravity ``log_g``.
+
+        Parameters
+        ----------
+        T_s : int
+            Effective temperature
+        log_g : float
+            Surface gravity
+        """
+        from astropy.modeling.models import BlackBody
+
+        wavelengths = np.linspace(500, 55000, 1000) * u.Angstrom
+        bb = np.pi * u.sr * BlackBody(
+            T_s * u.K, scale=1 * u.W / u.m ** 3 / u.sr
+        )(wavelengths)
+
+        return cls(wavelengths, bb)
+
+    def plot(self, ax=None, **kwargs):
+        """
+        Plot the stellar spectrum.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            Matplotlib axis object
+        kwargs : dict
+            Dictionary passed to the `~matplotlib.pyplot.plot` command
+
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            Updated axis object
+        """
+        import matplotlib.pyplot as plt
+        from astropy.visualization import quantity_support
+
+        if ax is None:
+            ax = plt.gca()
+
+        with quantity_support():
+            ax.plot(self.wavelength, self.spectral_flux_density, **kwargs)
+
+        return ax
