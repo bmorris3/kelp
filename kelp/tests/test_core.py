@@ -4,7 +4,7 @@ import numpy as np
 from astropy.modeling.models import BlackBody
 import astropy.units as u
 
-from ..core import Model, tilda_mu, H
+from ..core import Model, tilda_mu, H, StellarSpectrum
 from ..registries import Planet, Filter
 from ..fast import bl_test, argmin_test, H_cython_test
 
@@ -216,3 +216,43 @@ def test_hermite_polynomials(lmax):
         [H_cython_test(lmax, th, 0.6) for th in theta],
         H(lmax, theta, 0.6), rtol=1e-5
     )
+
+
+def test_stellar_spectra():
+    xi = np.linspace(-np.pi, np.pi, 100)
+
+    p = Planet.from_name("HD 189733")
+
+    ss_bb = StellarSpectrum.from_blackbody(p.T_s)
+    ss = StellarSpectrum.from_phoenix(p.T_s)
+
+    # Compute phase curve given a blackbody model
+    m = Model(
+        0, 0.6, 4.5, 0, [[0], [0, 0.1, 0]], 1,
+        planet=p,
+        filt=Filter.from_name("IRAC 1"),
+    )
+
+    # Compute phase curve from PHOENIX model stellar spectrum
+    m_phoenix = Model(
+        0, 0.6, 4.5, 0, [[0], [0, 0.1, 0]], 1,
+        planet=p,
+        filt=Filter.from_name("IRAC 1"),
+        stellar_spectrum=ss
+    )
+
+    # compute phase curve with astropy blackbody function:
+    m_bb = Model(
+        0, 0.6, 4.5, 0, [[0], [0, 0.1, 0]], 1,
+        planet=p,
+        filt=Filter.from_name("IRAC 1"),
+        stellar_spectrum=ss_bb
+    )
+
+    pc = m.thermal_phase_curve(xi)
+    pc_phoenix = m_phoenix.thermal_phase_curve(xi)
+    pc_bb = m_bb.thermal_phase_curve(xi)
+
+    # Check that all three are roughly equivalent:
+    np.testing.assert_allclose(pc.flux, pc_bb.flux, rtol=1e-5)
+    np.testing.assert_allclose(pc_phoenix.flux, pc_bb.flux, rtol=0.05)
