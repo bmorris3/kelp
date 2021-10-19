@@ -552,7 +552,8 @@ class Model(object):
         return PhaseCurve(xi, reflected_light_ppm), A_g, q
 
     def phase_curve(self, xi, omega, g, n_theta=20, n_phi=200, f=2 ** -0.5,
-                    cython=True, quad=False, check_sorted=True):
+                    cython=True, quad=False, check_sorted=True,
+                    _temperature_map=None):
         r"""
         Reflected light phase curve for a homogeneous sphere by
         Heng, Morris & Kitzmann (2021) with the thermal phase curve for a planet
@@ -600,13 +601,15 @@ class Model(object):
 
         thermal = self.thermal_phase_curve(
             xi, n_theta=n_theta, n_phi=n_phi, f=f, cython=cython, quad=quad,
-            check_sorted=check_sorted
+            check_sorted=check_sorted,
+            _temperature_map=_temperature_map
         )
 
         return PhaseCurve(xi, thermal.flux + reflected.flux), A_g, q
 
     def thermal_phase_curve(self, xi, n_theta=20, n_phi=200, f=2 ** -0.5,
-                            cython=True, quad=False, check_sorted=True):
+                            cython=True, quad=False, check_sorted=True,
+                            _temperature_map=None):
         r"""
         Compute the thermal phase curve of the system as a function
         of observer angle ``xi``.
@@ -672,6 +675,9 @@ class Model(object):
                 if not np.all(np.diff(xi) >= 0):
                     raise ValueError("xi array must be sorted")
 
+            if _temperature_map is None:
+                _temperature_map = np.zeros((n_phi, n_theta))
+
             fluxes = _phase_curve(
                 xi.astype('double'),
                 self.hotspot_offset,
@@ -685,7 +691,8 @@ class Model(object):
                 self.stellar_spectrum.wavelength.to(
                     u.m).value.astype('double'),
                 self.stellar_spectrum.spectral_flux_density.to(
-                    u.W/u.m**3).value.astype('double')
+                    u.W/u.m**3).value.astype('double'),
+                _temperature_map.astype('double')
             )
 
         return PhaseCurve(xi, 1e6 * fluxes, channel=self.filt.name)

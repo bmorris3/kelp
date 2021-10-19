@@ -1145,7 +1145,8 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
                  int n_theta, int n_phi, double [:] filt_wavelength,
                  double [:] filt_transmittance, float f,
                  double [:] stellar_spectrum_wavelength,
-                 double [:] stellar_spectrum_spectral_flux_density):
+                 double [:] stellar_spectrum_spectral_flux_density,
+                 double [:, :] temperature_map):
     """
     Compute the phase curve evaluated at phases `xi`.
     """
@@ -1175,12 +1176,16 @@ def _phase_curve(double [:] xi, float hotspot_offset, float omega_drag,
     cdef double [::1] fluxes_view = fluxes
 
     # Cython alternative to the pure python implementation:
-    h_ml_sum = _h_ml_sum_cy(hotspot_offset, omega_drag,
-                           alpha, theta2d, phi2d, C_ml,
-                           lmax)
-    T_eq = f * T_s * a_rs**-0.5
+    if np.count_nonzero(temperature_map) > 0:
+        T = temperature_map
+    else:
+        h_ml_sum = _h_ml_sum_cy(hotspot_offset, omega_drag,
+                                alpha, theta2d, phi2d, C_ml,
+                                lmax)
 
-    T = T_eq * (1 - A_B)**0.25 * (1 + h_ml_sum)
+        T_eq = f * T_s * a_rs**-0.5
+
+        T = T_eq * (1 - A_B)**0.25 * (np.ones_like(h_ml_sum) + h_ml_sum)
 
     rp_rs = rp_a * a_rs
     cdef np.ndarray[DTYPE_t, ndim=2] ones = np.ones((n_theta, n_phi), dtype=DTYPE)
