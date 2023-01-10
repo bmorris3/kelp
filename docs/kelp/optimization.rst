@@ -48,7 +48,7 @@ We'll also set up the model parameters using the :math:`h_{m\ell}` basis:
          [0, 0.15, 0]]
     obs_err = 50         # Observational white noise
 
-Now we'll initialize a noisy instance of the model to be our "truth" in
+Now we'll initialize a noisy instance of the model to be our "truth" in
 this example, which we will recover with optimization techniques:
 
 .. code-block:: python
@@ -154,9 +154,9 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
         return -np.inf
 
 
-    initp = np.array([-0.7, 0.1])
+    initp = np.array([-0.7, 0.2, 2 ** -0.5])
 
-    bounds = [[0, 2], [0.1, 1]]
+    bounds = [[-2, 0], [0.0, 1], [0.5, 0.85]]
 
     soln = minimize(lambda *args: -lnprob(*args),
                     initp, args=(xi, obs, obs_err),
@@ -165,7 +165,7 @@ values for the hotspot offset :math:`\Delta \phi` and the power in the
 
 ``soln.x`` now contains the best-fit (:math:`\Delta \phi`, :math:`C_{11}`)
 parameters from Powell's method. With this guess at the maximum a posteriori
-values for the free parameters, let's now use Markov Chain Monte Carlo to
+values for the free parameters, let's now use Markov Chain Monte Carlo to
 measure the uncertainty on the maximum-likelihood parameters:
 
 .. code-block:: python
