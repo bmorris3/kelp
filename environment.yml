@@ -1,11 +1,10 @@
 name: kelp
 channels:
   - conda-forge
-  - anaconda
 dependencies:
-  - pymc3
   - llvm
-  - exoplanet
   - clang-11
   - pip:
     - pytest-astropy
+    - exoplanet
+    - pymc3
