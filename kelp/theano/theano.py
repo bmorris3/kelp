@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import pi as pi64
-import theano.tensor as tt
-from theano import config
+import aesara.tensor as tt
+from aesara import config
 
 __all__ = [
     'thermal_phase_curve',

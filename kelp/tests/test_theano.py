@@ -1,8 +1,8 @@
 import pytest
 
 import numpy as np
-import pymc3 as pm
-import pymc3_ext as pmx
+import pymc as pm
+import pymc_ext as pmx
 import astropy.units as u
 
 from .test_core import trapz2d

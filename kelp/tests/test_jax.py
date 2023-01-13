@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-import pymc3 as pm
-import pymc3_ext as pmx
+import pymc as pm
+import pymc_ext as pmx
 import astropy.units as u
 
 from ..registries import Planet, Filter
