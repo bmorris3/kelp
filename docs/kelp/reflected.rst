@@ -39,8 +39,8 @@ First we'll import the necessary packages (there are quite a few!):
 
     import theano.tensor as tt
     import exoplanet as xo
-    import pymc3 as pm
-    import pymc3_ext as pmx
+    import pymc as pm
+    import pymc_ext as pmx
 
     from corner import corner
 
@@ -54,7 +54,7 @@ First we'll import the necessary packages (there are quite a few!):
     from kelp.theano import reflected_phase_curve, thermal_phase_curve
 
 Note that we have imported the phase curve functions from the ``theano`` module,
-because we will be using PyMC3 to construct the model and draw posterior
+because we will be using PyMC to construct the model and draw posterior
 samples.
 
 Now we will define the system parmaeters that we will use to construct the phase
@@ -165,7 +165,7 @@ transmittance curve for Kepler:
     filt_wavelength, filt_trans = filt.wavelength.to(u.m).value, filt.transmittance
 
 
-Next we construct the PyMC3 model. This is a long block of code, so let's
+Next we construct the PyMC model. This is a long block of code, so let's
 jump straight into in-line comments:
 
 .. code-block:: python
@@ -247,7 +247,7 @@ jump straight into in-line comments:
 
 Now our model is set up, and we are ready to draw posterior samples from the
 model given the data, which we will do with
-`pymc3-ext <https://github.com/exoplanet-dev/pymc3-ext>`_ for the most efficient
+`pymc-ext <https://github.com/exoplanet-dev/pymc-ext>`_ for the most efficient
 posterior sampling of our degenerate phase curve parameterization. This will take
 up to a minute:
 
@@ -300,8 +300,8 @@ Let's finally plot the final results:
 
     import theano.tensor as tt
     import exoplanet as xo
-    import pymc3 as pm
-    import pymc3_ext as pmx
+    import pymc as pm
+    import pymc_ext as pmx
 
     from corner import corner
 
@@ -547,8 +547,8 @@ As with the previous example, we begin with some imports:
     theano.config.floatX = floatX
 
     import exoplanet as xo
-    import pymc3 as pm
-    import pymc3_ext as pmx
+    import pymc as pm
+    import pymc_ext as pmx
     from corner import corner
 
     from lightkurve import search_lightcurve
@@ -698,7 +698,7 @@ for the light curve normalization.
 Now that the model is constructed, we're ready to sample from the posterior
 distribution for the geometric albedo, the integral phase function, and the
 scattering asymmetry factor, which we do again with
-`pymc3-ext <https://github.com/exoplanet-dev/pymc3-ext>`_ for the most efficient
+`pymc-ext <https://github.com/exoplanet-dev/pymc-ext>`_ for the most efficient
 posterior sampling of our degenerate phase curve parameterization:
 
 .. code-block:: python
@@ -741,8 +741,8 @@ We can plot the results with the following commands:
     theano.config.floatX = floatX
 
     import exoplanet as xo
-    import pymc3 as pm
-    import pymc3_ext as pmx
+    import pymc as pm
+    import pymc_ext as pmx
     from corner import corner
 
     from lightkurve import search_lightcurve

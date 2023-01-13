@@ -320,11 +320,11 @@ number of walkers to be more like a factor of 5-10 greater than the number of
 dimensions, and the number of steps should be increased by a factor of at least
 a few.
 
-PyMC3
+PyMC
 -----
 
 The :math:`h_{m\ell}` basis has also been implemented within kelp using theano
-for compatibility with PyMC3. Here's a simple example that shows inference with
+for compatibility with pymc. Here's a simple example that shows inference with
 the theano module:
 
 .. code-block:: python
@@ -334,7 +334,7 @@ the theano module:
     import matplotlib.pyplot as plt
     import astropy.units as u
 
-    import pymc3 as pm
+    import pymc as pm
     from corner import corner
 
     floatX = 'float32'
