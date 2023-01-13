@@ -6,5 +6,5 @@ dependencies:
   - clang-11
   - pip:
     - pytest-astropy
-    - exoplanet @ git+https://github.com/exoplanet-dev/exoplanet.git
+    - git+https://github.com/exoplanet-dev/exoplanet.git
     - pymc>4,<5
