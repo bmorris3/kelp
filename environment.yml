@@ -7,4 +7,4 @@ dependencies:
   - pip:
     - pytest-astropy
     - exoplanet
-    - pymc>4
+    - pymc>4,<5
