@@ -4,8 +4,7 @@ requires = [
     "setuptools",
     "setuptools_scm",
     "wheel",
-    "extension-helpers",
-    "numpy",
+    "numpy>=1.24",
     "Cython"
 ]
 
