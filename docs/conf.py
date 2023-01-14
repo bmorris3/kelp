@@ -205,7 +205,6 @@ if on_rtd:
         os.system('./git-lfs fetch')  # download content from remote
         os.system('./git-lfs checkout')  # make local files to have the real content on them
 
-intersphinx_mapping['pymc'] = ('https://www.pymc.io/projects/docs/en/stable/', None)
 intersphinx_mapping['lightkurve'] = ('https://docs.lightkurve.org/', None)
 intersphinx_mapping['exoplanet'] = ('https://docs.exoplanet.codes/en/stable/',
                                     None)

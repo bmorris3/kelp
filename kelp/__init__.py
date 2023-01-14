@@ -8,4 +8,3 @@ from ._astropy_init import *   # noqa
 
 from .core import *  # noqa
 from .registries import *  # noqa
-#from .fast import *  # noqa

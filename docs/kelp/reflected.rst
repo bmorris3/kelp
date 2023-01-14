@@ -37,7 +37,7 @@ First we'll import the necessary packages (there are quite a few!):
     import matplotlib.pyplot as plt
     from scipy.stats import binned_statistic
 
-    import aesara.tensor as tt
+    import pytensor.tensor as tt
     import exoplanet as xo
     import pymc as pm
     import pymc_ext as pmx
@@ -298,7 +298,7 @@ Let's finally plot the final results:
     import matplotlib.pyplot as plt
     from scipy.stats import binned_statistic
 
-    import aesara.tensor as tt
+    import pytensor.tensor as tt
     import exoplanet as xo
     import pymc as pm
     import pymc_ext as pmx
@@ -542,9 +542,9 @@ As with the previous example, we begin with some imports:
     import matplotlib.pyplot as plt
     from scipy.stats import binned_statistic
 
-    import aesara
+    import pytensor
     floatX = 'float64'
-    aesara.config.floatX = floatX
+    pytensor.config.floatX = floatX
 
     import exoplanet as xo
     import pymc as pm
@@ -736,9 +736,9 @@ We can plot the results with the following commands:
     import matplotlib.pyplot as plt
     from scipy.stats import binned_statistic
 
-    import aesara
+    import pytensor
     floatX = 'float64'
-    aesara.config.floatX = floatX
+    pytensor.config.floatX = floatX
 
     import exoplanet as xo
     import pymc as pm

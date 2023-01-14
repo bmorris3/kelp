@@ -320,26 +320,29 @@ number of walkers to be more like a factor of 5-10 greater than the number of
 dimensions, and the number of steps should be increased by a factor of at least
 a few.
 
-PyMC
------
+JAX/Numpyro
+-----------
 
-The :math:`h_{m\ell}` basis has also been implemented within kelp using theano
-for compatibility with pymc. Here's a simple example that shows inference with
-the theano module:
+.. plot::
+    :include-source:
 
-.. code-block:: python
-
-    import multiprocessing as mp
     import numpy as np
-    import matplotlib.pyplot as plt
     import astropy.units as u
 
-    import pymc as pm
+    from kelp import jax, Model, Filter, Planet
+    from jax.random import PRNGKey, split
+
+    import numpyro
+    # Set the number of cores on your machine for parallelism:
+    cpu_cores = 1
+    numpyro.set_host_device_count(cpu_cores)
+
+    from numpyro.infer import MCMC, NUTS
+    from numpyro import distributions as dist
+
+    # these packages will aid in visualization:
+    import arviz
     from corner import corner
-
-    floatX = 'float32'
-
-    from kelp import theano, Model, Filter, Planet
 
     np.random.seed(42)
 
@@ -365,7 +368,6 @@ the theano module:
     obs = model.thermal_phase_curve(xi, f=true_f).flux
     obs += obs_err * np.random.randn(xi.shape[0])
 
-
     # Set planet parameters:
     lmax = 1
     T_s = planet.T_s
@@ -375,39 +377,70 @@ the theano module:
     # Set resolution of grid points on sphere:
     n_phi = 100
     n_theta = 10
-    phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi, dtype=floatX)
-    theta = np.linspace(0, np.pi, n_theta, dtype=floatX)
+    phi = np.linspace(-2 * np.pi, 2 * np.pi, n_phi)
+    theta = np.linspace(0, np.pi, n_theta)
     theta2d, phi2d = np.meshgrid(theta, phi)
 
-    with pm.Model() as hml_model:
-        delta_phi = pm.Uniform(
-            "delta_phi", lower=np.radians(-90), upper=np.radians(90),
-            testval=np.radians(-40)
+
+    def model():
+        delta_phi = numpyro.sample(
+            "delta_phi", dist.Uniform(
+                low=np.radians(-90),
+                high=np.radians(90)
+            )
         )
-        C_11 = pm.Uniform(
-            "C_11", lower=0.01, upper=0.3, testval=0.15
+        C_11 = numpyro.sample(
+            "C_11", dist.Uniform(
+                low=0.01, high=0.3
+            )
         )
-        f = pm.Normal(
-            "f", mu=2**-0.5, sigma=0.1
+        f = numpyro.sample(
+            "f", dist.Normal(
+                loc=2 ** -0.5, scale=0.1
+            )
         )
 
-        thermal_phase_curve, temperature_map, ps = theano.thermal_phase_curve(
-            xi.astype(floatX), delta_phi,
+        thermal_phase_curve, temperature_map = jax.thermal_phase_curve(
+            xi, delta_phi,
             omega, alpha, C_11, T_s, a_rs, rp_a, A_B,
-            theta2d.astype(floatX), phi2d.astype(floatX),
-            filt.wavelength.to(u.m).value.astype(floatX),
-            filt.transmittance.astype(floatX), true_f
+            theta2d, phi2d,
+            filt.wavelength.to(u.m).value,
+            filt.transmittance, true_f
         )
 
-        pm.Normal(
-            "obs", mu=thermal_phase_curve, observed=obs, sigma=obs_err
+        # Normally distributed likelihood
+        numpyro.sample(
+            "obs", dist.Normal(
+                loc=thermal_phase_curve,
+                scale=obs_err
+            ), obs=obs
         )
 
-        trace = pm.sample(
-            draws=1000, tune=1000,
-            compute_convergence_checks=False,
-            mp_ctx=mp.get_context('fork')
-        )
+
+    # Random numbers in jax are generated like this:
+    rng_seed = 42
+    rng_keys = split(
+        PRNGKey(rng_seed),
+        cpu_cores
+    )
+
+    # Define a sampler, using here the No U-Turn Sampler (NUTS)
+    # with a dense mass matrix:
+    sampler = NUTS(
+        model,
+        dense_mass=True
+    )
+
+    # Monte Carlo sampling for a number of steps and parallel chains:
+    mcmc = MCMC(
+        sampler,
+        num_warmup=1_000,
+        num_samples=5_000,
+        num_chains=cpu_cores
+    )
+
+    # Run the MCMC
+    mcmc.run(rng_keys)
 
     truths = {
         "delta_phi": hotspot_offset,
@@ -415,9 +448,21 @@ the theano module:
         "f": true_f
     }
 
-    df = pm.trace_to_dataframe(trace)[truths.keys()]
+    # arviz converts a numpyro MCMC object to an `InferenceData` object based on xarray:
+    result = arviz.from_numpyro(mcmc)
+
+    # make a corner plot
     corner(
-        df,
-        truths=[truths[k] for k in truths.keys()]
-    )
-    plt.show()
+        result,
+        quiet=True,
+        truths=truths
+    );
+
+
+PyMC
+----
+
+kelp used to support PyMC3, but too many breaking changes were introduced
+by the PyMC developers to keep up, so we have dropped support for PyMC.
+Users looking for a probabilistic programming framework are instead encouraged
+to try out the JAX interface with numpyro.
