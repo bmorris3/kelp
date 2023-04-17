@@ -1,9 +1,12 @@
 name: kelp
-channels:
-  - conda-forge
 dependencies:
-  - llvm
-  - clang-11
   - pip:
     - pytest-astropy
-    - git+https://github.com/exoplanet-dev/exoplanet.git
+    - batman-package
+    - emcee
+    - corner
+    - tqdm
+    - lightkurve
+    - jax[cpu]
+    - numpyro
+    - arviz
