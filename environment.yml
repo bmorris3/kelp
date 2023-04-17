@@ -1,12 +1,3 @@
 name: kelp
-dependencies:
-  - pip:
-    - pytest-astropy
-    - batman-package
-    - emcee
-    - corner
-    - tqdm
-    - lightkurve
-    - jax[cpu]
-    - numpyro
-    - arviz
+channels:
+  - conda-forge
