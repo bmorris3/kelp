@@ -381,7 +381,6 @@ JAX/Numpyro
     theta = np.linspace(0, np.pi, n_theta)
     theta2d, phi2d = np.meshgrid(theta, phi)
 
-
     def model():
         delta_phi = numpyro.sample(
             "delta_phi", dist.Uniform(
@@ -405,17 +404,16 @@ JAX/Numpyro
             omega, alpha, C_11, T_s, a_rs, rp_a, A_B,
             theta2d, phi2d,
             filt.wavelength.to(u.m).value,
-            filt.transmittance, true_f
+            filt.transmittance, f
         )
 
         # Normally distributed likelihood
         numpyro.sample(
             "obs", dist.Normal(
-                loc=thermal_phase_curve,
+                loc=1e6 * thermal_phase_curve,
                 scale=obs_err
             ), obs=obs
         )
-
 
     # Random numbers in jax are generated like this:
     rng_seed = 42
@@ -458,9 +456,8 @@ JAX/Numpyro
         truths=truths
     );
 
-
-PyMC
-----
+Deprecated: PyMC
+----------------
 
 kelp used to support PyMC3, but too many breaking changes were introduced
 by the PyMC developers to keep up, so we have dropped support for PyMC.
