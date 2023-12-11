@@ -25,7 +25,7 @@ combines all aspects of a challenging phase curve (except atmospheric
 inhomogeneity, for this see the next section). HAT-P-7 b is a 2700 K planet with
 strong ellipsoidal variations, nearly-equal contributions to the Kepler phase
 curve from thermal emission and reflected light, plus detectable Doppler
-beaming. We'll implement each of these contributions in the example below, and
+beaming. We'll implement each of these contributions in the example below, and
 solve for the maximum-likelihood single-scattering albedo and scattering
 asymmetry factor, as well as the amplitudes of the Doppler beaming and
 ellipsoidal variations.
@@ -66,8 +66,8 @@ Note that we have imported the phase curve functions from the ``jax`` module,
 because we will be using numpyro to construct the model and draw posterior
 samples.
 
-Now we will define the system parmaeters that we will use to construct the phase
-curvec and phase fold the light curve:
+Now we will define the system parameters that we will use to construct the phase
+curve and phase fold the light curve:
 
 .. code-block:: python
 
@@ -109,7 +109,7 @@ phase curve. We will also sigma-clip the fluxes to remove outliers:
 .. code-block:: python
 
     lcf = search_lightcurve(
-        p.name, mission="Kepler", cadence="long", quarter=10
+        p.name, mission="Kepler", cadence="long", quarter=10, author="Kepler"
     ).download_all()
 
     slc = lcf.stitch()
@@ -404,7 +404,7 @@ Let's finally plot the final results:
     eclipse_half_dur = p.duration / p.per / 2
 
     lcf = search_lightcurve(
-        p.name, mission="Kepler", cadence="long", quarter=10
+        p.name, mission="Kepler", cadence="long", quarter=10, author="Kepler"
     ).download_all()
 
     slc = lcf.stitch()
@@ -699,7 +699,7 @@ curve over all quarters:
 .. code-block:: python
 
     lcf = search_lightcurve(
-        "Kepler-7", mission="Kepler", cadence="long",
+        "Kepler-7", mission="Kepler", cadence="long", author="Kepler"
     ).download_all()
 
     slc = lcf.stitch().remove_nans()
@@ -936,7 +936,7 @@ We can plot the results with the following commands:
     )
 
     lcf = search_lightcurve(
-        "Kepler-7", mission="Kepler", cadence="long",
+        "Kepler-7", mission="Kepler", cadence="long", author="Kepler"
     ).download_all()
 
     slc = lcf.stitch().remove_nans()
