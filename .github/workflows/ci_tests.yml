@@ -35,7 +35,7 @@ jobs:
           - name: Python 3.9 with latest dev versions of key dependencies
             os: ubuntu-latest
             python: 3.9
-            toxenv: py39-test-devdeps
+            toxenv: py39-test-alldeps
 
           - name: Test building of Sphinx docs
             os: ubuntu-latest
