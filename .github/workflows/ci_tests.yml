@@ -26,16 +26,16 @@ jobs:
             python: 3.x
             toxenv: codestyle
 
-          - name: Python 3.8 with all optional dependencies remote data
+          - name: Python 3.11 with all optional dependencies remote data
             os: ubuntu-latest
-            python: 3.8
-            toxenv: py38-test-alldeps
+            python: 3.11
+            toxenv: py311-test-alldeps
             toxposargs: --remote-data
 
-          - name: Python 3.9 with latest dev versions of key dependencies
+          - name: Python 3.11 with latest dev versions of key dependencies
             os: ubuntu-latest
-            python: 3.9
-            toxenv: py39-test-alldeps
+            python: 3.11
+            toxenv: py311-test-alldeps
 
           - name: Test building of Sphinx docs
             os: ubuntu-latest
