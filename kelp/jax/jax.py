@@ -16,17 +16,31 @@ __all__ = [
 ]
 
 floatX = 'float32'
-pi = np.cast[floatX](pi64)
 
-h = np.cast[floatX](6.62607015e-34)  # J s
-c = np.cast[floatX](299792458.0)  # m/s
-k_B = np.cast[floatX](1.380649e-23)  # J/K
-hc2 = np.cast[floatX](6.62607015e-34 * 299792458.0 ** 2)
+try:
+    pi = np.cast[floatX](pi64)
 
-zero = np.cast[floatX](0)
-one = np.cast[floatX](1)
-two = np.cast[floatX](2)
-half = np.cast[floatX](0.5)
+    h = np.cast[floatX](6.62607015e-34)  # J s
+    c = np.cast[floatX](299792458.0)  # m/s
+    k_B = np.cast[floatX](1.380649e-23)  # J/K
+    hc2 = np.cast[floatX](6.62607015e-34 * 299792458.0 ** 2)
+
+    zero = np.cast[floatX](0)
+    one = np.cast[floatX](1)
+    two = np.cast[floatX](2)
+    half = np.cast[floatX](0.5)
+except:
+    pi = np.asarray(pi64, dtype=floatX)
+
+    h = np.asarray(6.62607015e-34, dtype=floatX)  # J s
+    c = np.asarray(299792458.0, dtype=floatX)  # m/s
+    k_B = np.asarray(1.380649e-23, dtype=floatX)  # J/K
+    hc2 = np.asarray(6.62607015e-34 * 299792458.0 ** 2, dtype=floatX)
+
+    zero = np.asarray(0, dtype=floatX)
+    one = np.asarray(1, dtype=floatX)
+    two = np.asarray(2, dtype=floatX)
+    half = np.asarray(0.5, dtype=floatX)
 
 
 def linspace(start, stop, n):
