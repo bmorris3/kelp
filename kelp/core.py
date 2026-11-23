@@ -99,7 +99,7 @@ def _integral_phase_function(Psi, sin_abs_sort_alpha, sort_alpha, sort):
     Integral phase function q for a generic, possibly asymmetric reflectivity
     map
     """
-    return np.trapz(Psi[sort] * sin_abs_sort_alpha, sort_alpha)
+    return np.trapezoid(Psi[sort] * sin_abs_sort_alpha, sort_alpha)
 
 
 def reflected_phase_curve(xi, omega, g, a_rp):
@@ -514,7 +514,7 @@ class Model(object):
                 return lambda theta, phi: np.inf
 
             bb_t = BlackBody(temperature=T * u.K)
-            int_bb = np.trapz(bb_t(self.filt.wavelength[:, None, None]) *
+            int_bb = np.trapezoid(bb_t(self.filt.wavelength[:, None, None]) *
                               self.filt.transmittance[:, None, None],
                               self.filt.wavelength, axis=0
                               ).si.value
@@ -659,7 +659,7 @@ class Model(object):
                         cos(phi + xi))
 
             bb_ts = BlackBody(temperature=self.T_s * u.K)
-            planck_star = np.trapz(self.filt.transmittance *
+            planck_star = np.trapezoid(self.filt.transmittance *
                                    bb_ts(self.filt.wavelength),
                                    self.filt.wavelength).si.value
 
